@@ -2200,14 +2200,7 @@ if game.PlaceId == 8065776277 and L_1_ then
 			playTick(L_167_)
 		end
 	})
-	L_214_:addToggle({
-		text = "Hide Viewmodel",
-		flag = "hide_viewmodel",
-		state = false,
-		callback = function()
-			playTick(L_167_)
-		end
-	})
+
 	L_214_:addSlider({
 		text = "Camera Speed",
 		flag = "camera_speed",
@@ -2848,7 +2841,17 @@ local L_5_ = {
 	tabSize = 0,
 	theme = {},
 	foldername = "cuteware",
-	fileext = ".txt"
+	fileext = ".txt",
+	makefolderRecursive = function(self, path)
+		local parts = string.split(path, "/")
+		local current = ""
+		for i, part in ipairs(parts) do
+			current = current == "" and part or current .. "/" .. part
+			if not isfolder(current) then
+				makefolder(current)
+			end
+		end
+	end
 }
 library_flags = L_5_.flags;
 -- Ensure updatePitch exists so callbacks and runtime calls don't error if the function
@@ -3011,6 +3014,7 @@ function L_5_:LoadConfig(L_732_arg0, L_733_arg1)
 	do local _opt = L_5_.options["Ragebot Priority"]; if _opt and type(_opt.SetState) == "function" then _opt:SetState(false) end end
 end;
 function L_5_:SaveConfig(L_738_arg0, L_739_arg1, L_740_arg2)
+	if not L_738_arg0 or L_738_arg0 == "" then return end;
 	local L_741_ = {}
 	if table.find(self:GetConfigs(), L_738_arg0) and not L_740_arg2 then
 		L_741_ = game:GetService"HttpService":JSONDecode(readfile(self.foldername .. "/" .. L_738_arg0 .. self.fileext))
@@ -3044,6 +3048,7 @@ function L_5_:SaveConfig(L_738_arg0, L_739_arg1, L_740_arg2)
 	if L_739_arg1 then
 		setclipboard(game:GetService"HttpService":JSONEncode(L_741_))
 	else
+		self:makefolderRecursive(self.foldername)
 		writefile(self.foldername .. "/" .. L_738_arg0 .. self.fileext, game:GetService"HttpService":JSONEncode(L_741_))
 	end
 end;
@@ -5646,7 +5651,13 @@ function updateViewModelVisuals()
 			if library_flags["Weapon Chams"] then
 				if L_991_forvar1:IsA"MeshPart" or L_991_forvar1.Name == "Part" then
 					if L_991_forvar1.Name == "StatClock" then
-						L_991_forvar1:ClearAllChildren()
+						for _, statObj in pairs(L_991_forvar1:GetDescendants()) do
+							if statObj:IsA("TextLabel") or statObj:IsA("ImageLabel") or statObj:IsA("Decal") then
+								statObj.Transparency = 1
+							elseif statObj:IsA("BasePart") then
+								statObj.Transparency = 1
+							end
+						end
 					end;
 					L_991_forvar1.Color = library_flags["weaponColor"]
 					L_991_forvar1.Transparency = 1 - L_5_.options["weaponColor"].trans;
@@ -5658,7 +5669,8 @@ function updateViewModelVisuals()
 						L_991_forvar1.Reflectance = library_flags["weaponReflectance"] / 50
 					end;
 					if L_991_forvar1:FindFirstChild("SurfaceAppearance") then
-						L_991_forvar1.SurfaceAppearance:Destroy()
+						L_991_forvar1.SurfaceAppearance.AlphaMode = Enum.AlphaMode.Transparency
+						-- Instead of Destroy(), which can crash Client script if it tries to modify it later
 					end
 				end;
 				local L_992_ = false;
@@ -5683,7 +5695,14 @@ function updateViewModelVisuals()
 			if L_991_forvar1:IsA"Model" then
 				for L_995_forvar0, L_996_forvar1 in next, L_989_:GetDescendants() do
 					if library_flags["Remove Sleeves"] and L_996_forvar1.Name == "Sleeve" then
-						L_996_forvar1:Destroy()
+						if L_996_forvar1:IsA("BasePart") or L_996_forvar1:IsA("Decal") then
+							L_996_forvar1.Transparency = 1
+						end
+						for _, slvObj in pairs(L_996_forvar1:GetDescendants()) do
+							if slvObj:IsA("BasePart") or slvObj:IsA("Decal") then
+								slvObj.Transparency = 1
+							end
+						end
 					end;
 					if library_flags["Arm Chams"] then
 						if hasProperty(L_996_forvar1, "CastShadow") then
@@ -5864,7 +5883,12 @@ function calculateWallbang(L_1018_arg0, L_1019_arg1, L_1020_arg2)
 	local L_1033_ = 0;
 	repeat
 		L_1033_ = L_1033_ + 1;
-		L_1029_, pos = workspace:FindPartOnRayWithIgnoreList(L_1025_, L_1027_, false, true)
+		local _ignore = {}
+		for _, v in next, L_1027_ do
+			if typeof(v) == "Instance" then table.insert(_ignore, v) end
+		end
+		if #_ignore == 0 then table.insert(_ignore, workspace) end
+		L_1029_, pos = workspace:FindPartOnRayWithIgnoreList(L_1025_, _ignore, false, true)
 		if L_1029_ and L_1029_ ~= L_1022_ or L_1029_ and L_1029_.Parent and L_1029_ ~= L_1022_ then
 			if not L_1029_:IsDescendantOf(L_1018_arg0) and not string.find(L_1029_.Name, "Head") then
 				local L_1035_ = 1;
@@ -5925,13 +5949,13 @@ function returnDamage(L_1046_arg0, L_1047_arg1)
 		return 0, 0
 	end;
 	pcall(function()
-		local L_1050_ = {
-			L_34_,
-			L_32_.Character,
-			workspace.Debris,
-			workspace.Ray_Ignore,
-			workspace.Map:WaitForChild("Clips"),
-			workspace.Map:WaitForChild("SpawnPoints")
+		local _ignore = {
+			(typeof(L_34_) == "Instance" and L_34_) or workspace,
+			(L_32_.Character and typeof(L_32_.Character) == "Instance" and L_32_.Character) or workspace,
+			workspace:FindFirstChild("Debris") or workspace,
+			workspace:FindFirstChild("Ray_Ignore") or workspace,
+			(workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("Clips")) or workspace,
+			(workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("SpawnPoints")) or workspace
 		}
 		local L_1051_ = L_36_.gun;
 		local L_1052_ = L_1051_.Penetration.Value * 0.01 or 0;
@@ -5941,7 +5965,7 @@ function returnDamage(L_1046_arg0, L_1047_arg1)
 		local L_1056_ = library_flags["From Camera"] and L_34_.CFrame.p or Vector3.new(L_32_.Character.PrimaryPart.Position.X, L_32_.Character.Head.Position.Y, L_32_.Character.PrimaryPart.Position.Z)
 		local L_1057_ = CFrame.new(L_1056_, L_1055_).lookVector.unit * L_1053_ * 0.0694;
 		local L_1058_ = Ray.new(L_1056_, L_1057_)
-		local L_1059_, L_1060_ = workspace:FindPartOnRayWithIgnoreList(L_1058_, L_1050_, false, true)
+		local L_1059_, L_1060_ = workspace:FindPartOnRayWithIgnoreList(L_1058_, _ignore, false, true)
 		local L_1061_ = 0;
 		local L_1062_ = 0;
 		local L_1063_, L_1064_, L_1065_;
@@ -5949,7 +5973,7 @@ function returnDamage(L_1046_arg0, L_1047_arg1)
 		L_1048_ = 1;
 		pcall(function()
 			repeat
-				L_1063_, L_1064_, L_1065_ = workspace:FindPartOnRayWithIgnoreList(L_1058_, L_1050_, false, true)
+				L_1063_, L_1064_, L_1065_ = workspace:FindPartOnRayWithIgnoreList(L_1058_, _ignore, false, true)
 				if L_1063_ and L_1063_.Parent then
 					L_1066_ = 1;
 					local L_1067_ = tostring(L_1063_.Material)
@@ -5960,8 +5984,10 @@ function returnDamage(L_1046_arg0, L_1047_arg1)
 					if L_1063_:FindFirstChild("PartModifier") then
 						L_1066_ = L_1063_.PartModifier.Value
 					end;
-					if L_1063_:IsDescendantOf(game.Workspace.Ray_Ignore) or L_1063_:IsDescendantOf(game.Workspace.Debris) then
-						L_1066_ = 0
+					if typeof(L_1063_) == "Instance" then
+						if L_1063_:IsDescendantOf(game.Workspace.Ray_Ignore) or L_1063_:IsDescendantOf(game.Workspace.Debris) then
+							L_1066_ = 0
+						end
 					end;
 					local L_1071_, L_1072_ = game.Workspace:FindPartOnRayWithWhitelist(Ray.new(L_1064_ + L_1057_ * 1, L_1057_ * -2), {
 						L_1063_
@@ -5974,9 +6000,9 @@ function returnDamage(L_1046_arg0, L_1047_arg1)
 						L_1061_ = L_1061_ + 1
 					end;
 					if L_1063_ and L_1063_.Parent and L_1063_.Parent.Name == "Hitboxes" or L_1063_ and L_1063_.Parent and L_1063_.Parent.Parent and L_1063_.Parent.Parent:FindFirstChild("Humanoid") or L_1063_ and L_1063_.Parent and L_1063_.Parent:FindFirstChild("Humanoid") or L_1063_ and L_1063_.Parent and L_1063_.Parent:FindFirstChild("Humanoid") and (1 > L_1063_.Transparency or L_1063_.Name == "HeadHB") and L_1063_.Parent:IsA("Model") then
-						table.insert(L_1050_, L_1063_.Parent)
+						table.insert(_ignore, L_1063_.Parent)
 					else
-						table.insert(L_1050_, L_1063_)
+						table.insert(_ignore, L_1063_)
 					end
 				end
 			until L_1063_ == nil or L_1063_.Parent == L_1046_arg0 or L_1062_ >= L_1052_ or 0 >= L_1048_ or L_1061_ >= 4
@@ -5988,13 +6014,13 @@ function returnDamage(L_1046_arg0, L_1047_arg1)
 	return L_1048_, L_1049_
 end;
 function tracerTable(L_1075_arg0)
-	local L_1076_ = {
-		L_34_,
-		L_32_.Character,
-		game.Workspace.Debris,
-		game.Workspace.Ray_Ignore,
-		game.Workspace.Map:WaitForChild("Clips"),
-		game.Workspace.Map:WaitForChild("SpawnPoints")
+	local _ignore = {
+		(typeof(L_34_) == "Instance" and L_34_) or workspace,
+		(L_32_.Character and typeof(L_32_.Character) == "Instance" and L_32_.Character) or workspace,
+		game.Workspace:FindFirstChild("Debris") or workspace,
+		game.Workspace:FindFirstChild("Ray_Ignore") or workspace,
+		(game.Workspace:FindFirstChild("Map") and game.Workspace.Map:FindFirstChild("Clips")) or workspace,
+		(game.Workspace:FindFirstChild("Map") and game.Workspace.Map:FindFirstChild("SpawnPoints")) or workspace
 	}
 	local L_1077_ = game.ReplicatedStorage.Weapons:FindFirstChild(L_32_.Character.EquippedTool.Value)
 	local L_1078_ = L_1077_.Penetration.Value * 0.01;
@@ -6003,7 +6029,7 @@ function tracerTable(L_1075_arg0)
 	local L_1081_ = L_1075_arg0;
 	local L_1082_ = CFrame.new(L_34_.CFrame.p, L_1081_).lookVector.unit * L_1079_ * 0.0694;
 	local L_1083_ = Ray.new(L_34_.CFrame.p, L_1082_)
-	local L_1084_, L_1085_ = workspace:FindPartOnRayWithIgnoreList(L_1083_, L_1076_, false, true)
+	local L_1084_, L_1085_ = workspace:FindPartOnRayWithIgnoreList(L_1083_, _ignore, false, true)
 	local L_1086_ = 0;
 	local L_1087_ = 0;
 	local L_1088_, L_1089_, L_1090_;
@@ -6011,7 +6037,7 @@ function tracerTable(L_1075_arg0)
 	damagemodifier = 1;
 	pcall(function()
 		repeat
-			L_1088_, L_1089_, L_1090_ = workspace:FindPartOnRayWithIgnoreList(L_1083_, L_1076_, false, true)
+			L_1088_, L_1089_, L_1090_ = workspace:FindPartOnRayWithIgnoreList(L_1083_, _ignore, false, true)
 			if L_1088_ and L_1088_.Parent then
 				L_1091_ = 1;
 				L_1086_ = L_1086_ + 1;
@@ -6029,9 +6055,9 @@ function tracerTable(L_1075_arg0)
 				damagemodifier = 1 - L_1087_ / L_1078_;
 				if damagemodifier > 0 and L_1091_ < 100 then
 					if L_1088_ and L_1088_.Parent and L_1088_.Parent.Name == "Hitboxes" or L_1088_ and L_1088_.Parent and L_1088_.Parent.Parent and L_1088_.Parent.Parent:FindFirstChild("Humanoid") or L_1088_ and L_1088_.Parent and L_1088_.Parent:FindFirstChild("Humanoid") or L_1088_ and L_1088_.Parent and L_1088_.Parent:FindFirstChild("Humanoid") and (1 > L_1088_.Transparency or L_1088_.Name == "HeadHB") and L_1088_.Parent:IsA("Model") then
-						table.insert(L_1076_, L_1088_.Parent)
+						table.insert(_ignore, L_1088_.Parent)
 					else
-						table.insert(L_1076_, L_1088_)
+						table.insert(_ignore, L_1088_)
 					end
 				end
 			end
@@ -6162,14 +6188,14 @@ function getNearest(L_1100_arg0, L_1101_arg1, L_1102_arg2)
 			local L_1107_, L_1108_ = L_34_:WorldToScreenPoint(L_1106_forvar1.Character.Head.Position)
 			local L_1109_ = false;
 			if L_1102_arg2 then
-				local L_1110_ = Ray.new(L_34_.CFrame.p, (L_1106_forvar1.Character.Head.Position - L_34_.CFrame.p).unit * 500)
-				local L_1111_, L_1112_ = workspace:FindPartOnRayWithIgnoreList(L_1110_, {
-					L_34_,
-					L_32_.Character,
-					workspace.Ray_Ignore,
-					workspace.Map:WaitForChild("Clips"),
-					workspace.Map:WaitForChild("SpawnPoints")
-				})
+				local _ignore = {
+					(typeof(L_34_) == "Instance" and L_34_) or workspace,
+					(L_32_.Character and typeof(L_32_.Character) == "Instance" and L_32_.Character) or workspace,
+					workspace:FindFirstChild("Ray_Ignore") or workspace,
+					(workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("Clips")) or workspace,
+					(workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("SpawnPoints")) or workspace
+				}
+				local L_1111_, L_1112_ = workspace:FindPartOnRayWithIgnoreList(L_1110_, _ignore)
 				if L_1111_:IsDescendantOf(L_1106_forvar1.Character) then
 					L_1109_ = true
 				end
@@ -6268,74 +6294,33 @@ function CreateThread(L_1125_arg0)
 end;
 local L_75_ = false;
 function tracers(L_1127_arg0, L_1128_arg1)
-	if not L_75_ and L_32_.Character and L_32_.Character:FindFirstChild("Gun") and L_1128_arg1 then
-		L_75_ = true;
-		CreateThread(function()
-			wait()
-			L_75_ = false
+	if L_1128_arg1 and L_1127_arg0 then
+		local line = Drawing.new("Line")
+		line.Thickness = 2
+		line.Color = library_flags["tracerColor"] or Color3.new(1, 1, 1)
+		line.Transparency = 1 - (L_5_.options["tracerColor"] and L_5_.options["tracerColor"].trans or 0)
+		
+		local conn
+		conn = game:GetService("RunService").RenderStepped:Connect(function()
+			if not L_1128_arg1 or not L_1128_arg1.Parent then
+				line.Visible = false
+				return
+			end
+			local pos, vis = workspace.CurrentCamera:WorldToViewportPoint(L_1128_arg1.Position)
+			local pos2, vis2 = workspace.CurrentCamera:WorldToViewportPoint(L_1127_arg0)
+			if vis and vis2 then
+				line.Visible = true
+				line.From = Vector2.new(pos.X, pos.Y)
+				line.To = Vector2.new(pos2.X, pos2.Y)
+			else
+				line.Visible = false
+			end
 		end)
-		local L_1129_ = Instance.new("Part")
-		local L_1130_ = Instance.new("Part")
-		local L_1131_ = Instance.new("Beam", L_1129_)
-		local L_1132_ = Instance.new("Part")
-		local L_1133_ = Instance.new("Attachment")
-		local L_1134_ = Instance.new("Attachment")
-		if library_flags["Tracer Mode"] == "Part" then
-			local L_1135_ = L_1128_arg1.Position - L_1127_arg0;
-			L_1132_.Material = "ForceField"
-			L_1132_.CFrame = CFrame.new(L_1127_arg0 + L_1135_ / 2, L_1127_arg0)
-			L_1132_.Size = Vector3.new(0.125, 0.125, L_1135_.Magnitude)
-			L_1132_.CanCollide = false;
-			L_1132_.Transparency = 0;
-			L_1132_.Anchored = true;
-			L_1132_.Color = library_flags["tracerColor"]
-			L_1132_.Parent = workspace.Debris
-		elseif library_flags["Tracer Mode"] == "Beam" then
-			L_1129_.Size = Vector3.new(0.1, 0.1, 0.1)
-			L_1129_.Transparency = 1;
-			L_1129_.Parent = workspace;
-			L_1129_.Position = L_1127_arg0;
-			L_1129_.CanCollide = false;
-			L_1129_.Anchored = true;
-			L_1133_.Parent = L_1129_;
-			L_1130_.Size = Vector3.new(0.1, 0.1, 0.1)
-			L_1130_.Transparency = 1;
-			L_1130_.Parent = workspace;
-			L_1130_.Position = L_1128_arg1.Position;
-			L_1130_.CanCollide = false;
-			L_1130_.Anchored = true;
-			L_1134_.Parent = L_1130_;
-			L_1131_.Color = ColorSequence.new(library_flags["tracerColor"])
-			L_1131_.LightEmission = 1;
-			L_1131_.LightInfluence = 0;
-			L_1131_.Transparency = NumberSequence.new{
-				NumberSequenceKeypoint.new(0, 1 - L_5_.options["tracerColor"].trans),
-				NumberSequenceKeypoint.new(1, 1 - L_5_.options["tracerColor"].trans)
-			}
-			L_1131_.Width0 = 0.25;
-			L_1131_.Width1 = 0.25;
-			L_1131_.Attachment0 = L_1133_;
-			L_1131_.Attachment1 = L_1134_;
-			L_1131_.FaceCamera = library_flags["Beams Face Camera"]
-			L_1131_.Texture = "http://www.roblox.com/asset/?id=" .. library_flags["Beam Texture"]
-			L_1131_.TextureMode = Enum.TextureMode.Wrap;
-			L_1131_.Parent = L_1129_
-		end;
+		
 		CreateThread(function()
-			wait(0.3)
-			for L_1136_forvar0 = 1, 100, 4 do
-				wait()
-				if L_1136_forvar0 / 100 > 1 - L_5_.options["tracerColor"].trans then
-					L_1132_.Transparency = L_1136_forvar0 / 100;
-					L_1131_.Transparency = NumberSequence.new{
-						NumberSequenceKeypoint.new(0, L_1136_forvar0 / 100),
-						NumberSequenceKeypoint.new(1, L_1136_forvar0 / 100)
-					}
-				end
-			end;
-			L_1132_:Destroy()
-			L_1129_:Destroy()
-			L_1130_:Destroy()
+			wait(1)
+			if conn then conn:Disconnect() end
+			line:Remove()
 		end)
 	end
 end;
@@ -6789,7 +6774,7 @@ spawn(function()
             L_1227_ = L_1232_arg0;
             L_1228_ = pingIntance:GetValue()
             L_1226_ = getgenv().damagemod;
-            L_1218_ = getgenv().oldPositions;
+            L_1218_ = getgenv().oldPositions or {};
             L_1225_ = getgenv().predictionValue;
             L_1229_ = getgenv().holdE;
             L_1230_ = getgenv().hookJP;
@@ -6811,6 +6796,7 @@ spawn(function()
 		return oldNewindex(L_1233_arg0, L_1234_arg1, L_1235_arg2)
 	end))
 	oldNamecall = hookmetamethod(game, "__namecall", LPH_NO_VIRTUALIZE(function(L_1236_arg0, ...)
+		local L_argsCount_ = select("#", ...)
 		local L_1237_ = {
 			...
 		}
@@ -6998,14 +6984,19 @@ spawn(function()
 						if L_1279_ then
 							wait()
 							local L_1280_ = Ray.new(L_1212_.CFrame.p, (L_1221_(L_1256_) - L_1212_.CFrame.p).unit * 100)
-							local L_1281_, L_1282_, L_1283_ = workspace:FindPartOnRayWithIgnoreList(L_1280_, {
-								workspace.Map,
-								L_1212_,
-								L_1210_.Character,
-								workspace.Ray_Ignore,
-								workspace.Map:WaitForChild("Clips"),
-								workspace.Map:WaitForChild("SpawnPoints")
-							}, false, true)
+							local _ignore = {}
+							for _, v in pairs({
+								(typeof(L_1212_) == "Instance" and L_1212_) or workspace,
+								(L_1210_.Character and typeof(L_1210_.Character) == "Instance" and L_1210_.Character) or workspace,
+								workspace:FindFirstChild("Ray_Ignore") or workspace,
+								(workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("Clips")) or workspace,
+								(workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("SpawnPoints")) or workspace
+							}) do
+								if typeof(v) == "Instance" then
+									table.insert(_ignore, v)
+								end
+							end
+							local L_1281_, L_1282_, L_1283_ = workspace:FindPartOnRayWithIgnoreList(L_1280_, _ignore, false, true)
 							L_1224_(L_1282_, L_1279_)
 						end
 					end
@@ -7054,20 +7045,11 @@ spawn(function()
 				return wait(387420489)
 			end
 		end;
-		if L_1238_ == "SetPrimaryPartCFrame" then
-			if L_1239_ ~= L_1210_.Name and L_1219_["viewmodelEnabled"] then
-				local L_1288_ = L_1237_[1]
-				L_1288_ = L_1288_ * CFrame.new(L_1219_["viewmodelX"] / 10, L_1219_["viewmodelY"] / 10, - L_1219_["viewmodelZ"] / 10) * CFrame.Angles(0, 0, math.rad(L_1219_["viewmodelRoll"]))
-				if L_1217_ and L_1219_["Visualize Silent Angles"] then
-					L_1288_ = CFrame.new(L_1288_.p, L_1217_)
-				end;
-				return oldNamecall(L_1236_arg0, L_1288_, select(2, ...))
-			end
-		end;
+
 		if L_1239_ == "Filter" and L_1219_["Uncensor Chat"] then
 			return L_1237_[1]
 		end;
-		return oldNamecall(L_1236_arg0, ...)
+		return oldNamecall(L_1236_arg0, unpack(L_1237_, 1, L_argsCount_))
 	end))
 end)
 local L_97_ = L_5_:AddTab"Legit"
@@ -8561,38 +8543,7 @@ visualsWorld:AddToggle({
 	flag = "skyboxValue",
 	callback = updateSkybox
 })
-visualsViewmodel = visualsColumn2:AddSection"Viewmodel"
-visualsViewmodel:AddToggle({
-	text = "Enabled",
-	flag = "viewmodelEnabled"
-})
-visualsViewmodel:AddToggle({
-	text = "Visualize Silent Angles"
-})
-visualsViewmodel:AddSlider({
-	text = "X",
-	min = -25,
-	max = 25,
-	flag = "viewmodelX"
-})
-visualsViewmodel:AddSlider({
-	text = "Y",
-	min = -25,
-	max = 25,
-	flag = "viewmodelY"
-})
-visualsViewmodel:AddSlider({
-	text = "Z",
-	min = -25,
-	max = 25,
-	flag = "viewmodelZ"
-})
-visualsViewmodel:AddSlider({
-	text = "Roll",
-	min = 0,
-	max = 360,
-	flag = "viewmodelRoll"
-})
+
 miscTab = L_5_:AddTab"Misc"
 miscColumn = miscTab:AddColumn()
 miscColumn2 = miscTab:AddColumn()
@@ -8881,17 +8832,207 @@ miscOK = L_5_:AddWarning({
 miscMain:AddButton({
 	text = "Unlock Inventory",
 	callback = function()
-		if not getgenv().unlockInventory then
-			getgenv().unlockInventory = true;
-			L_36_.CurrentInventory = L_93_;
-			local L_1421_, L_1422_ = L_32_.SkinFolder.TFolder:Clone(), L_32_.SkinFolder.CTFolder:Clone()
-			L_32_.SkinFolder.TFolder:Destroy()
-			L_32_.SkinFolder.CTFolder:Destroy()
-			L_1421_.Parent = L_32_.SkinFolder;
-			L_1422_.Parent = L_32_.SkinFolder;
-			miscOK.text = "Unlocked all skins, knives and gloves."
+		if not getgenv().Vexus_Spoof_Loaded then
+			getgenv().Vexus_Spoof_Loaded = true
+
+			-- [[ VEXUS INVENTORY SPOOFER V8.9 - EMERGENCY STABILITY FIX ]]
+			local HttpService = game:GetService("HttpService")
+			local ReplicatedStorage = game:GetService("ReplicatedStorage")
+			local ReplicatedFirst = game:GetService("ReplicatedFirst")
+			local Players = game:GetService("Players")
+			local CoreGui = game:GetService("CoreGui")
+			local LocalPlayer = Players.LocalPlayer
+
+			local function VEX_LOG(msg, detail)
+				local prefix = "[VEXUS]"
+				print(string.format("%s %s %s", prefix, tostring(msg), detail and ("-> " .. tostring(detail)) or ""))
+			end
+
+			local DataModule = nil
+			local success, err = pcall(function()
+				DataModule = require(ReplicatedFirst:WaitForChild("Data"))
+			end)
+			if not success or not DataModule then VEX_LOG("ОШИБКА: DataModule не найден", err) return end
+
+			local InventoryController = nil
+			pcall(function() 
+				InventoryController = require(ReplicatedStorage:WaitForChild("Controllers"):WaitForChild("InventoryController"))
+			end)
+
+			local EventsFolder = ReplicatedStorage:FindFirstChild("Events")
+			local DataEvent = EventsFolder and EventsFolder:FindFirstChild("DataEvent")
+			local UpdateSkins = EventsFolder and EventsFolder:FindFirstChild("UpdateSkins")
+
+			local function setupStealth()
+				local mt = getrawmetatable(game)
+				local oldNC = mt.__namecall
+				setreadonly(mt, false)
+				
+				mt.__namecall = newcclosure(function(self, ...)
+					local method = getnamecallmethod()
+					local args = {...}
+					
+					if (method == "InvokeServer" or method == "FireServer") then
+						local objName = self.Name
+						if objName == "Hugh" then return nil end
+						if method == "FireServer" and args[1] == LocalPlayer.UserId then return nil end
+						if method == "FireServer" and #objName == 38 then return nil end
+
+						if self == DataEvent and method == "FireServer" and getgenv().Vexus_IsSpoofing then
+							local p = args[1]
+							if type(p) == "table" and p[1] == "EquipItem" then
+								local target, slot, itemData = p[2], p[3], p[4]
+								if target == "Both" then
+									getgenv().Vexus_SpoofedLoadout["CT"][slot] = itemData
+									getgenv().Vexus_SpoofedLoadout["T"][slot] = itemData
+								else
+									getgenv().Vexus_SpoofedLoadout[target][slot] = itemData
+								end
+								task.defer(function()
+									pcall(function()
+										if UpdateSkins then UpdateSkins:FireServer() end
+										if getgenv().Vexus_ForceUpdate then getgenv().Vexus_ForceUpdate() end
+									end)
+								end)
+								return nil
+							end
+						end
+					end
+					return oldNC(self, ...)
+				end)
+				setreadonly(mt, true)
+			end
+			setupStealth()
+
+			local function getSkinPart(fullName)
+				if typeof(fullName) ~= "string" then return "Stock" end
+				if fullName:find("_") then local p = fullName:split("_") return p[#p] end
+				return fullName
+			end
+
+			local function getWeaponPart(fullName)
+				if typeof(fullName) ~= "string" then return "Stock" end
+				if fullName:find("_") then local p = fullName:split("_") return p[1] end
+				return fullName
+			end
+
+			local function findSmart(folder, name)
+				local variants = { name, name:gsub(" ", ""), name:lower():gsub(" ", "") }
+				for _, v in ipairs(variants) do local o = folder:FindFirstChild(v) if o then return o end end
+				return nil
+			end
+
+			local function writePhysicalValue(side, slot, itemData)
+				local sf = LocalPlayer:FindFirstChild("SkinFolder")
+				if not sf or not itemData then return end
+				local sideFolder = sf:FindFirstChild(side .. "Folder")
+				if not sideFolder then return end
+				
+				local weaponName, skinName = getWeaponPart(itemData[1]), getSkinPart(itemData[1])
+				
+				if slot:lower():find("knife") then
+					local mainK = findSmart(sideFolder, "Knife")
+					if mainK then mainK.Value = skinName end
+					local teamK = findSmart(sideFolder, side .. " Knife") or sideFolder:FindFirstChild(side.."Knife")
+					if teamK then teamK.Value = weaponName end
+					local gK = sf:FindFirstChild("Knife")
+					if gK then gK.Value = skinName end
+				else
+					local obj = findSmart(sideFolder, slot)
+					if obj and obj:IsA("StringValue") then obj.Value = skinName end
+				end
+			end
+
+			local spoofedInventory = {}
+			getgenv().Vexus_IsSpoofing = (getgenv().Vexus_IsSpoofing == nil) and true or getgenv().Vexus_IsSpoofing
+			getgenv().Vexus_SpoofedLoadout = getgenv().Vexus_SpoofedLoadout or { ["CT"] = {}, ["T"] = {} }
+
+			getgenv().Vexus_ForceUpdate = function()
+				if InventoryController and InventoryController.TryUpdateInventoryData then
+					pcall(function() InventoryController:TryUpdateInventoryData() end)
+				end
+				for side, loadout in pairs(getgenv().Vexus_SpoofedLoadout) do
+					for slot, itemData in pairs(loadout) do
+						writePhysicalValue(side, slot, itemData)
+					end
+				end
+			end
+
+			local function Arsenal_Encode(itemData)
+				if InventoryController and InventoryController.Encode then return InventoryController:Encode(itemData) end
+				local r = "" for i=1,#itemData do r=r..tostring(itemData[i]) end return r
+			end
+
+			local function runCrawl()
+				spoofedInventory = {}
+				local skins = ReplicatedStorage:FindFirstChild("Skins")
+				if skins then
+					for _, weapon in pairs(skins:GetChildren()) do
+						for _, skin in pairs(weapon:GetChildren()) do
+							local d = { weapon.Name .. "_" .. skin.Name, "StatTrak", "Equippable", 1337 }
+							spoofedInventory[Arsenal_Encode(d)] = d
+						end
+					end
+				end
+			end
+			runCrawl()
+
+			getgenv().Arsenal_OriginalGetData = getgenv().Arsenal_OriginalGetData or DataModule.GetData
+			local oldGetData = getgenv().Arsenal_OriginalGetData
+			local cachedInv = nil
+
+			DataModule.GetData = function(key)
+				local res = oldGetData(key)
+				if not getgenv().Vexus_IsSpoofing then return res end
+				if key == "Inventory" then
+					if not cachedInv then
+						local mid = {}
+						for k,v in pairs(oldGetData("Inventory") or {}) do mid[k] = v end
+						for k,v in pairs(spoofedInventory) do if not mid[k] then mid[k] = v end end
+						cachedInv = mid
+					end
+					return cachedInv
+				elseif key == "CTLoadout" or key == "TLoadout" then
+					local side = key:find("CT") and "CT" or "T"
+					local spoofed = getgenv().Vexus_SpoofedLoadout[side] or {}
+					local newL = {}
+					if type(res) == "table" then for k,v in pairs(res) do newL[k] = v end end
+					for slot, data in pairs(spoofed) do
+						newL[slot] = data
+						if slot == "Knife" then newL.KnifeOver = true end
+						if slot == "Glove" then newL.GloveOver = true end
+					end
+					return newL
+				end
+				return res
+			end
+
+			local function createGUI()
+				if CoreGui:FindFirstChild("VexusV7") then CoreGui.VexusV7:Destroy() end
+				local sg = Instance.new("ScreenGui", CoreGui); sg.Name = "VexusV7"; sg.ResetOnSpawn = false
+				local main = Instance.new("Frame", sg); main.Size = UDim2.new(0, 240, 0, 100); main.Position = UDim2.new(0.5, -120, 0.45, 0); main.BackgroundColor3 = Color3.fromRGB(15,10,15); main.BorderSizePixel = 0; main.Active = true; Instance.new("UICorner", main).CornerRadius = UDim.new(0, 10)
+				local title = Instance.new("TextLabel", main); title.Size = UDim2.new(1, 0, 0, 30); title.Text = " VEXUS V8.9 EMERGENCY FIX"; title.TextColor3 = Color3.new(1,0,0); title.Font = Enum.Font.GothamBold; title.TextSize = 10; title.BackgroundTransparency = 1
+				
+				local b = Instance.new("TextButton", main); b.Size = UDim2.new(0.9, 0, 0, 40); b.Position = UDim2.new(0.05, 0, 0.4, 0); b.BackgroundColor3 = Color3.fromRGB(40,40,60); b.Text = getgenv().Vexus_IsSpoofing and "VEXUS: ВКЛ (СТАБИЛЬНО)" or "ВЫКЛ"; b.TextColor3 = Color3.new(1,1,1); b.Font = Enum.Font.GothamBold; Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
+				b.MouseButton1Click:Connect(function()
+					getgenv().Vexus_IsSpoofing = not getgenv().Vexus_IsSpoofing
+					cachedInv = nil
+					b.Text = getgenv().Vexus_IsSpoofing and "VEXUS: ВКЛ (СТАБИЛЬНО)" or "ВЫКЛ"
+					if getgenv().Vexus_ForceUpdate then getgenv().Vexus_ForceUpdate() end
+				end)
+			end
+
+			createGUI()
+			VEX_LOG("V8.9 Активна. Рекурсия устранена. Игра стабильна.")
+
+			miscOK.text = "Vexus Spoof V8.9 loaded."
+			miscOK:Show()
+		else
+			if getgenv().Vexus_ForceUpdate then getgenv().Vexus_ForceUpdate() end
+			miscOK.text = "Vexus Inventory already unlocked."
 			miscOK:Show()
 		end
+		-- END VEXUS BLOCK
 	end
 })
 miscMovement = miscColumn:AddSection"Movement"
@@ -9292,13 +9433,14 @@ function isTouchingWall()
 	for L_1468_forvar0, L_1469_forvar1 in next, L_124_ do
 		local L_1470_ = (L_1467_.CFrame * L_1469_forvar1).p;
 		local L_1471_ = Ray.new(L_1467_.CFrame.p, (L_1470_ - L_1467_.CFrame.p).unit * 1.8)
-		local L_1472_, L_1473_ = workspace:FindPartOnRayWithIgnoreList(L_1471_, {
-			L_34_,
-			L_32_.Character,
-			workspace.Ray_Ignore,
-			workspace.Map:WaitForChild("Clips"),
-			workspace.Map:WaitForChild("SpawnPoints")
-		})
+		local _ignore = {
+			(typeof(L_34_) == "Instance" and L_34_) or workspace,
+			(L_32_.Character and typeof(L_32_.Character) == "Instance" and L_32_.Character) or workspace,
+			workspace:FindFirstChild("Ray_Ignore") or workspace,
+			(workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("Clips")) or workspace,
+			(workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("SpawnPoints")) or workspace
+		}
+		local L_1472_, L_1473_ = workspace:FindPartOnRayWithIgnoreList(L_1471_, _ignore)
 		if L_1472_ then
 			return true
 		end
@@ -10461,7 +10603,7 @@ spawn(function()
 	end
 end)
 if isfile("cuteware/temp.tmp") then
-	L_5_:LoadConfig(readfile("cuteware/temp.tmp"))
+	L_5_:LoadConfig(nil, readfile("cuteware/temp.tmp"))
 	delfile("cuteware/temp.tmp")
 end;
 L_32_.OnTeleport:Connect(function(L_1679_arg0)
@@ -10615,14 +10757,14 @@ L_28_.RenderStepped:Connect(function(L_1691_arg0)
 				if library_flags["Visible Only ESP"] and L_32_.Character or not L_1696_ and L_1695_forvar1.object then
 					L_1706_ = false;
 					local L_1713_ = L_1696_ and L_1697_.Character.Head.Position or L_1695_forvar1.object.Position;
-					local L_1714_ = Ray.new(L_34_.CFrame.p, (L_1713_ - L_34_.CFrame.p).unit * 500)
-					local L_1715_, L_1716_ = workspace:FindPartOnRayWithIgnoreList(L_1714_, {
-						L_34_,
-						L_32_.Character,
-						workspace.Ray_Ignore,
-						workspace.Map:WaitForChild("Clips"),
-						workspace.Map:WaitForChild("SpawnPoints")
-					})
+					local _ignore = {
+						(typeof(L_34_) == "Instance" and L_34_) or workspace,
+						(L_32_.Character and typeof(L_32_.Character) == "Instance" and L_32_.Character) or workspace,
+						workspace:FindFirstChild("Ray_Ignore") or workspace,
+						(workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("Clips")) or workspace,
+						(workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("SpawnPoints")) or workspace
+					}
+					local L_1715_, L_1716_ = workspace:FindPartOnRayWithIgnoreList(L_1714_, _ignore)
 					if L_1696_ and L_1697_.Character then
 						L_1706_ = L_1715_:IsDescendantOf(L_1697_.Character)
 					elseif L_1715_ then
@@ -10738,7 +10880,9 @@ L_28_.RenderStepped:Connect(function(L_1691_arg0)
 	end;
 	for L_1724_forvar0, L_1725_forvar1 in next, L_30_:GetPlayers() do
 		if alive(L_1725_forvar1) then
-			getgenv().oldPositions[L_1725_forvar1.Name] = L_1725_forvar1.Character.HumanoidRootPart.Position
+			if getgenv().oldPositions then
+				getgenv().oldPositions[L_1725_forvar1.Name] = L_1725_forvar1.Character.HumanoidRootPart.Position
+			end
 		end;
 		if library_flags["Kill All"] then
             local Ping = game.Stats.PerformanceStats.Ping:GetValue()
@@ -13875,7 +14019,17 @@ local L_5_ = {
 	tabSize = 0,
 	theme = {},
 	foldername = "cuteware/cb",
-	fileext = ".txt"
+	fileext = ".txt",
+	makefolderRecursive = function(self, path)
+		local parts = string.split(path, "/")
+		local current = ""
+		for i, part in ipairs(parts) do
+			current = current == "" and part or current .. "/" .. part
+			if not isfolder(current) then
+				makefolder(current)
+			end
+		end
+	end
 }
 library_flags = L_5_.flags;
 getgenv().library = L_5_;
@@ -14052,6 +14206,7 @@ function L_5_:RefreshList(listObj, newValues)
 	end
 end
 function L_5_:SaveConfig(L_746_arg0, L_747_arg1, L_748_arg2)
+	if not L_746_arg0 or L_746_arg0 == "" then return end;
 	local L_749_ = {}
 	if table.find(self:GetConfigs(), L_746_arg0) and not L_748_arg2 then
 		L_749_ = game:GetService"HttpService":JSONDecode(readfile(self.foldername .. "/" .. L_746_arg0 .. self.fileext))
@@ -14085,6 +14240,7 @@ function L_5_:SaveConfig(L_746_arg0, L_747_arg1, L_748_arg2)
 	if L_747_arg1 then
 		setclipboard(game:GetService"HttpService":JSONEncode(L_749_))
 	else
+		self:makefolderRecursive(self.foldername)
 		writefile(self.foldername .. "/" .. L_746_arg0 .. self.fileext, game:GetService"HttpService":JSONEncode(L_749_))
 	end
 end;
@@ -16827,7 +16983,12 @@ function calculateWallbang(L_1026_arg0, L_1027_arg1, L_1028_arg2)
 	local L_1041_ = 0;
 	repeat
 		L_1041_ = L_1041_ + 1;
-		L_1037_, pos = workspace:FindPartOnRayWithIgnoreList(L_1033_, L_1035_, false, true)
+		local _ignore = {}
+		for _, v in next, L_1035_ do
+			if typeof(v) == "Instance" then table.insert(_ignore, v) end
+		end
+		if #_ignore == 0 then table.insert(_ignore, workspace) end
+		L_1037_, pos = workspace:FindPartOnRayWithIgnoreList(L_1033_, _ignore, false, true)
 		if L_1037_ and L_1037_ ~= L_1030_ or L_1037_ and L_1037_.Parent and L_1037_ ~= L_1030_ then
 			if not L_1037_:IsDescendantOf(L_1026_arg0) and not string.find(L_1037_.Name, "Head") then
 				local L_1043_ = 1;
@@ -16888,13 +17049,13 @@ function returnDamage(L_1054_arg0, L_1055_arg1)
 		return 0, 0
 	end;
 	pcall(function()
-		local L_1058_ = {
-			L_34_,
-			L_32_.Character,
-			workspace.Debris,
-			workspace.Ray_Ignore,
-			workspace.Map:WaitForChild("Clips"),
-			workspace.Map:WaitForChild("SpawnPoints")
+		local _ignore = {
+			(typeof(L_34_) == "Instance" and L_34_) or workspace,
+			(L_32_.Character and typeof(L_32_.Character) == "Instance" and L_32_.Character) or workspace,
+			workspace:FindFirstChild("Debris") or workspace,
+			workspace:FindFirstChild("Ray_Ignore") or workspace,
+			(workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("Clips")) or workspace,
+			(workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("SpawnPoints")) or workspace
 		}
 		local L_1059_ = L_36_.gun;
 		local L_1060_ = L_1059_.Penetration.Value * 0.01 or 0;
@@ -16904,7 +17065,7 @@ function returnDamage(L_1054_arg0, L_1055_arg1)
 		local L_1064_ = library_flags["From Camera"] and L_34_.CFrame.p or Vector3.new(L_32_.Character.PrimaryPart.Position.X, L_32_.Character.Head.Position.Y, L_32_.Character.PrimaryPart.Position.Z)
 		local L_1065_ = CFrame.new(L_1064_, L_1063_).lookVector.unit * L_1061_ * 0.0694;
 		local L_1066_ = Ray.new(L_1064_, L_1065_)
-		local L_1067_, L_1068_ = workspace:FindPartOnRayWithIgnoreList(L_1066_, L_1058_, false, true)
+		local L_1067_, L_1068_ = workspace:FindPartOnRayWithIgnoreList(L_1066_, _ignore, false, true)
 		local L_1069_ = 0;
 		local L_1070_ = 0;
 		local L_1071_, L_1072_, L_1073_;
@@ -16912,7 +17073,7 @@ function returnDamage(L_1054_arg0, L_1055_arg1)
 		L_1056_ = 1;
 		pcall(function()
 			repeat
-				L_1071_, L_1072_, L_1073_ = workspace:FindPartOnRayWithIgnoreList(L_1066_, L_1058_, false, true)
+				L_1071_, L_1072_, L_1073_ = workspace:FindPartOnRayWithIgnoreList(L_1066_, _ignore, false, true)
 				if L_1071_ and L_1071_.Parent then
 					L_1074_ = 1;
 					local L_1075_ = tostring(L_1071_.Material)
@@ -16923,8 +17084,10 @@ function returnDamage(L_1054_arg0, L_1055_arg1)
 					if L_1071_:FindFirstChild("PartModifier") then
 						L_1074_ = L_1071_.PartModifier.Value
 					end;
-					if L_1071_:IsDescendantOf(game.Workspace.Ray_Ignore) or L_1071_:IsDescendantOf(game.Workspace.Debris) then
-						L_1074_ = 0
+					if typeof(L_1071_) == "Instance" then
+						if L_1071_:IsDescendantOf(game.Workspace.Ray_Ignore) or L_1071_:IsDescendantOf(game.Workspace.Debris) then
+							L_1074_ = 0
+						end
 					end;
 					local L_1079_, L_1080_ = game.Workspace:FindPartOnRayWithWhitelist(Ray.new(L_1072_ + L_1065_ * 1, L_1065_ * -2), {
 						L_1071_
@@ -16937,9 +17100,9 @@ function returnDamage(L_1054_arg0, L_1055_arg1)
 						L_1069_ = L_1069_ + 1
 					end;
 					if L_1071_ and L_1071_.Parent and L_1071_.Parent.Name == "Hitboxes" or L_1071_ and L_1071_.Parent and L_1071_.Parent.Parent and L_1071_.Parent.Parent:FindFirstChild("Humanoid") or L_1071_ and L_1071_.Parent and L_1071_.Parent:FindFirstChild("Humanoid") or L_1071_ and L_1071_.Parent and L_1071_.Parent:FindFirstChild("Humanoid") and (1 > L_1071_.Transparency or L_1071_.Name == "HeadHB") and L_1071_.Parent:IsA("Model") then
-						table.insert(L_1058_, L_1071_.Parent)
+						table.insert(_ignore, L_1071_.Parent)
 					else
-						table.insert(L_1058_, L_1071_)
+						table.insert(_ignore, L_1071_)
 					end
 				end
 			until L_1071_ == nil or L_1071_.Parent == L_1054_arg0 or L_1070_ >= L_1060_ or 0 >= L_1056_ or L_1069_ >= 4
@@ -16951,13 +17114,13 @@ function returnDamage(L_1054_arg0, L_1055_arg1)
 	return L_1056_, L_1057_
 end;
 function tracerTable(L_1083_arg0)
-	local L_1084_ = {
-		L_34_,
-		L_32_.Character,
-		game.Workspace.Debris,
-		game.Workspace.Ray_Ignore,
-		game.Workspace.Map:WaitForChild("Clips"),
-		game.Workspace.Map:WaitForChild("SpawnPoints")
+	local _ignore = {
+		(typeof(L_34_) == "Instance" and L_34_) or workspace,
+		(L_32_.Character and typeof(L_32_.Character) == "Instance" and L_32_.Character) or workspace,
+		game.Workspace:FindFirstChild("Debris") or workspace,
+		game.Workspace:FindFirstChild("Ray_Ignore") or workspace,
+		(game.Workspace:FindFirstChild("Map") and game.Workspace.Map:FindFirstChild("Clips")) or workspace,
+		(game.Workspace:FindFirstChild("Map") and game.Workspace.Map:FindFirstChild("SpawnPoints")) or workspace
 	}
 	local L_1085_ = game.ReplicatedStorage.Weapons:FindFirstChild(L_32_.Character.EquippedTool.Value)
 	local L_1086_ = L_1085_.Penetration.Value * 0.01;
@@ -16966,7 +17129,7 @@ function tracerTable(L_1083_arg0)
 	local L_1089_ = L_1083_arg0;
 	local L_1090_ = CFrame.new(L_34_.CFrame.p, L_1089_).lookVector.unit * L_1087_ * 0.0694;
 	local L_1091_ = Ray.new(L_34_.CFrame.p, L_1090_)
-	local L_1092_, L_1093_ = workspace:FindPartOnRayWithIgnoreList(L_1091_, L_1084_, false, true)
+	local L_1092_, L_1093_ = workspace:FindPartOnRayWithIgnoreList(L_1091_, _ignore, false, true)
 	local L_1094_ = 0;
 	local L_1095_ = 0;
 	local L_1096_, L_1097_, L_1098_;
@@ -16974,7 +17137,7 @@ function tracerTable(L_1083_arg0)
 	damagemodifier = 1;
 	pcall(function()
 		repeat
-			L_1096_, L_1097_, L_1098_ = workspace:FindPartOnRayWithIgnoreList(L_1091_, L_1084_, false, true)
+			L_1096_, L_1097_, L_1098_ = workspace:FindPartOnRayWithIgnoreList(L_1091_, _ignore, false, true)
 			if L_1096_ and L_1096_.Parent then
 				L_1099_ = 1;
 				L_1094_ = L_1094_ + 1;
@@ -16992,9 +17155,9 @@ function tracerTable(L_1083_arg0)
 				damagemodifier = 1 - L_1095_ / L_1086_;
 				if damagemodifier > 0 and L_1099_ < 100 then
 					if L_1096_ and L_1096_.Parent and L_1096_.Parent.Name == "Hitboxes" or L_1096_ and L_1096_.Parent and L_1096_.Parent.Parent and L_1096_.Parent.Parent:FindFirstChild("Humanoid") or L_1096_ and L_1096_.Parent and L_1096_.Parent:FindFirstChild("Humanoid") or L_1096_ and L_1096_.Parent and L_1096_.Parent:FindFirstChild("Humanoid") and (1 > L_1096_.Transparency or L_1096_.Name == "HeadHB") and L_1096_.Parent:IsA("Model") then
-						table.insert(L_1084_, L_1096_.Parent)
+						table.insert(_ignore, L_1096_.Parent)
 					else
-						table.insert(L_1084_, L_1096_)
+						table.insert(_ignore, L_1096_)
 					end
 				end
 			end
@@ -17125,14 +17288,14 @@ function getNearest(L_1108_arg0, L_1109_arg1, L_1110_arg2)
 			local L_1115_, L_1116_ = L_34_:WorldToScreenPoint(L_1114_forvar1.Character.Head.Position)
 			local L_1117_ = false;
 			if L_1110_arg2 then
-				local L_1118_ = Ray.new(L_34_.CFrame.p, (L_1114_forvar1.Character.Head.Position - L_34_.CFrame.p).unit * 500)
-				local L_1119_, L_1120_ = workspace:FindPartOnRayWithIgnoreList(L_1118_, {
-					L_34_,
-					L_32_.Character,
-					workspace.Ray_Ignore,
-					workspace.Map:WaitForChild("Clips"),
-					workspace.Map:WaitForChild("SpawnPoints")
-				})
+				local _ignore = {
+					(typeof(L_34_) == "Instance" and L_34_) or workspace,
+					(L_32_.Character and typeof(L_32_.Character) == "Instance" and L_32_.Character) or workspace,
+					workspace:FindFirstChild("Ray_Ignore") or workspace,
+					(workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("Clips")) or workspace,
+					(workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("SpawnPoints")) or workspace
+				}
+				local L_1119_, L_1120_ = workspace:FindPartOnRayWithIgnoreList(L_1118_, _ignore)
 				if L_1119_:IsDescendantOf(L_1114_forvar1.Character) then
 					L_1117_ = true
 				end
@@ -17241,74 +17404,33 @@ function CreateThread(L_1133_arg0)
 end;
 local L_75_ = false;
 function tracers(L_1135_arg0, L_1136_arg1)
-	if not L_75_ and L_32_.Character and L_32_.Character:FindFirstChild("Gun") and L_1136_arg1 then
-		L_75_ = true;
-		CreateThread(function()
-			wait()
-			L_75_ = false
+	if L_1136_arg1 and L_1135_arg0 then
+		local line = Drawing.new("Line")
+		line.Thickness = 2
+		line.Color = library_flags["tracerColor"] or Color3.new(1, 1, 1)
+		line.Transparency = 1 - (L_5_.options["tracerColor"] and L_5_.options["tracerColor"].trans or 0)
+		
+		local conn
+		conn = game:GetService("RunService").RenderStepped:Connect(function()
+			if not L_1136_arg1 or not L_1136_arg1.Parent then
+				line.Visible = false
+				return
+			end
+			local pos, vis = workspace.CurrentCamera:WorldToViewportPoint(L_1136_arg1.Position)
+			local pos2, vis2 = workspace.CurrentCamera:WorldToViewportPoint(L_1135_arg0)
+			if vis and vis2 then
+				line.Visible = true
+				line.From = Vector2.new(pos.X, pos.Y)
+				line.To = Vector2.new(pos2.X, pos2.Y)
+			else
+				line.Visible = false
+			end
 		end)
-		local L_1137_ = Instance.new("Part")
-		local L_1138_ = Instance.new("Part")
-		local L_1139_ = Instance.new("Beam", L_1137_)
-		local L_1140_ = Instance.new("Part")
-		local L_1141_ = Instance.new("Attachment")
-		local L_1142_ = Instance.new("Attachment")
-		if library_flags["Tracer Mode"] == "Part" then
-			local L_1143_ = L_1136_arg1.Position - L_1135_arg0;
-			L_1140_.Material = "ForceField"
-			L_1140_.CFrame = CFrame.new(L_1135_arg0 + L_1143_ / 2, L_1135_arg0)
-			L_1140_.Size = Vector3.new(0.125, 0.125, L_1143_.Magnitude)
-			L_1140_.CanCollide = false;
-			L_1140_.Transparency = 0;
-			L_1140_.Anchored = true;
-			L_1140_.Color = library_flags["tracerColor"]
-			L_1140_.Parent = workspace.Debris
-		elseif library_flags["Tracer Mode"] == "Beam" then
-			L_1137_.Size = Vector3.new(0.1, 0.1, 0.1)
-			L_1137_.Transparency = 1;
-			L_1137_.Parent = workspace;
-			L_1137_.Position = L_1135_arg0;
-			L_1137_.CanCollide = false;
-			L_1137_.Anchored = true;
-			L_1141_.Parent = L_1137_;
-			L_1138_.Size = Vector3.new(0.1, 0.1, 0.1)
-			L_1138_.Transparency = 1;
-			L_1138_.Parent = workspace;
-			L_1138_.Position = L_1136_arg1.Position;
-			L_1138_.CanCollide = false;
-			L_1138_.Anchored = true;
-			L_1142_.Parent = L_1138_;
-			L_1139_.Color = ColorSequence.new(library_flags["tracerColor"])
-			L_1139_.LightEmission = 1;
-			L_1139_.LightInfluence = 0;
-			L_1139_.Transparency = NumberSequence.new{
-				NumberSequenceKeypoint.new(0, 1 - L_5_.options["tracerColor"].trans),
-				NumberSequenceKeypoint.new(1, 1 - L_5_.options["tracerColor"].trans)
-			}
-			L_1139_.Width0 = 0.25;
-			L_1139_.Width1 = 0.25;
-			L_1139_.Attachment0 = L_1141_;
-			L_1139_.Attachment1 = L_1142_;
-			L_1139_.FaceCamera = library_flags["Beams Face Camera"]
-			L_1139_.Texture = "http://www.roblox.com/asset/?id=" .. library_flags["Beam Texture"]
-			L_1139_.TextureMode = Enum.TextureMode.Wrap;
-			L_1139_.Parent = L_1137_
-		end;
+		
 		CreateThread(function()
-			wait(0.3)
-			for L_1144_forvar0 = 1, 100, 4 do
-				wait()
-				if L_1144_forvar0 / 100 > 1 - L_5_.options["tracerColor"].trans then
-					L_1140_.Transparency = L_1144_forvar0 / 100;
-					L_1139_.Transparency = NumberSequence.new{
-						NumberSequenceKeypoint.new(0, L_1144_forvar0 / 100),
-						NumberSequenceKeypoint.new(1, L_1144_forvar0 / 100)
-					}
-				end
-			end;
-			L_1140_:Destroy()
-			L_1137_:Destroy()
-			L_1138_:Destroy()
+			wait(1)
+			if conn then conn:Disconnect() end
+			line:Remove()
 		end)
 	end
 end;
@@ -17571,8 +17693,8 @@ local L_81_ = {
 function chamsPlr(L_1202_arg0)
 	if L_1202_arg0.Character and teamCheck(L_1202_arg0, L_39_) and L_1202_arg0.Character:FindFirstChild("HumanoidRootPart") then
 		for L_1203_forvar0, L_1204_forvar1 in next, L_1202_arg0.Character:GetChildren() do
-			if L_1204_forvar1:IsA"Accoutrement" then
-				L_1204_forvar1:Destroy()
+			if L_1204_forvar1:IsA("Accoutrement") and L_1204_forvar1:FindFirstChild("Handle") then
+				L_1204_forvar1.Handle.Transparency = 1
 			end;
 			if table.find(L_81_, L_1204_forvar1.Name) then
 				if L_1204_forvar1:FindFirstChild("inner") or L_1204_forvar1:FindFirstChild("outer") then
@@ -17764,7 +17886,7 @@ spawn(function()
 		L_1235_ = L_1240_arg0;
 		L_1236_ = pingIntance:GetValue()
 		L_1234_ = getgenv().damagemod;
-		L_1226_ = getgenv().oldPositions;
+		L_1226_ = getgenv().oldPositions or {};
 		L_1233_ = getgenv().predictionValue;
 		L_1237_ = getgenv().holdE;
 		L_1238_ = getgenv().hookJP;
@@ -17774,7 +17896,7 @@ spawn(function()
 		if L_1241_arg0.Name == "Crosshair" and L_1242_arg1 == "Visible" and L_1227_["Force Crosshair"] then
 			L_1243_arg2 = true
 		end;
-		if L_1241_arg0 == L_1220_ and L_1242_arg1 == "CFrame" then
+		if L_1241_arg0 == L_1220_ and L_1220_ ~= nil and L_1242_arg1 == "CFrame" then
 			if L_1227_["Aspect Ratio"] then
 				L_1243_arg2 = L_1243_arg2 * CFrame.new(0, 0, 0, 1, 0, 0, 0, L_1227_["ratioValue"], 0, 0, 0, 1)
 			end;
@@ -17785,6 +17907,7 @@ spawn(function()
 		return oldNewindex(L_1241_arg0, L_1242_arg1, L_1243_arg2)
 	end)
 	oldNamecall = hookmetamethod(game, "__namecall", function(L_1244_arg0, ...)
+		local L_argsCount2_ = select("#", ...)
 		local L_1245_ = {
 			...
 		}
@@ -17821,21 +17944,33 @@ spawn(function()
 		if L_1246_ == "Kick" and L_1244_arg0 == L_1218_ then
 			return
 		end;
-		if string.find(L_1246_, "FindPartOnRay") and (L_1227_["Ragebot"] or getgenv().silentAimEnabled) then
-			if getgenv().target then
+		if string.find(L_1246_, "FindPartOnRay") then
+			local _ray = L_1245_[1]
+			if (L_1227_["Ragebot"] or getgenv().silentAimEnabled) and getgenv().target then
 				local L_1250_ = getgenv().target.CFrame.p;
 				local L_1251_ = L_1220_.CFrame.p;
 				if not L_1227_["From Camera"] and L_1218_.Character and L_1218_.Character.PrimaryPart then
 					L_1251_ = Vector3.new(L_1218_.Character.PrimaryPart.Position.X, L_1218_.Character.Head.Position.Y, L_1218_.Character.PrimaryPart.Position.Z)
 				end;
-				local L_1252_ = Ray.new(L_1251_, (L_1250_ + Vector3.new(0, (L_1251_ - L_1250_).Magnitude / 500, 0) - L_1251_).unit * 500)
+				_ray = Ray.new(L_1251_, (L_1250_ + Vector3.new(0, (L_1251_ - L_1250_).Magnitude / 500, 0) - L_1251_).unit * 500)
 				CreateThread(function()
 					L_1225_ = L_1250_;
 					wait(0.3)
 					L_1225_ = nil
 				end)
-				return oldNamecall(L_1244_arg0, L_1252_, select(2, ...))
 			end
+			L_1245_[1] = _ray
+			
+			if L_1246_ == "FindPartOnRayWithIgnoreList" and type(L_1245_[2]) == "table" then
+				local _clean = {}
+				for _, v in pairs(L_1245_[2]) do
+					if typeof(v) == "Instance" then
+						table.insert(_clean, v)
+					end
+				end
+				L_1245_[2] = _clean
+			end
+			return oldNamecall(L_1244_arg0, unpack(L_1245_, 1, L_argsCount2_))
 		end;
 		if L_1246_ == "FireSzerver" then
 			if L_1247_ == "Updat1ePing" and L_1227_["Ping Spoof"] then
@@ -17973,14 +18108,15 @@ spawn(function()
 						if L_1287_ then
 							wait()
 							local L_1288_ = Ray.new(L_1220_.CFrame.p, (L_1229_(L_1264_) - L_1220_.CFrame.p).unit * 100)
-							local L_1289_, L_1290_, L_1291_ = workspace:FindPartOnRayWithIgnoreList(L_1288_, {
-								workspace.Map,
-								L_1220_,
-								L_1218_.Character,
-								workspace.Ray_Ignore,
-								workspace.Map:WaitForChild("Clips"),
-								workspace.Map:WaitForChild("SpawnPoints")
-							}, false, true)
+							local _ignore = {
+								workspace:FindFirstChild("Map") or workspace,
+								(typeof(L_1220_) == "Instance" and L_1220_) or workspace,
+								(L_1218_.Character and typeof(L_1218_.Character) == "Instance" and L_1218_.Character) or workspace,
+								workspace:FindFirstChild("Ray_Ignore") or workspace,
+								(workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("Clips")) or workspace,
+								(workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("SpawnPoints")) or workspace
+							}
+							local L_1289_, L_1290_, L_1291_ = workspace:FindPartOnRayWithIgnoreList(L_1288_, _ignore, false, true)
 							L_1232_(L_1290_, L_1287_)
 						end
 					end
@@ -18029,20 +18165,11 @@ spawn(function()
 				return wait(387420489)
 			end
 		end;
-		if L_1246_ == "SetPrimaryPartCFrame" then
-			if L_1247_ ~= L_1218_.Name and L_1227_["viewmodelEnabled"] then
-				local L_1296_ = L_1245_[1]
-				L_1296_ = L_1296_ * CFrame.new(L_1227_["viewmodelX"] / 10, L_1227_["viewmodelY"] / 10, - L_1227_["viewmodelZ"] / 10) * CFrame.Angles(0, 0, math.rad(L_1227_["viewmodelRoll"]))
-				if L_1225_ and L_1227_["Visualize Silent Angles"] then
-					L_1296_ = CFrame.new(L_1296_.p, L_1225_)
-				end;
-				return oldNamecall(L_1244_arg0, L_1296_, select(2, ...))
-			end
-		end;
+
 		if L_1247_ == "Filter" and L_1227_["Uncensor Chat"] then
 			return L_1245_[1]
 		end;
-		return oldNamecall(L_1244_arg0, ...)
+		return oldNamecall(L_1244_arg0, unpack(L_1245_, 1, L_argsCount2_))
 	end)
 end)
 local L_97_ = L_5_:AddTab"Legit"
@@ -19630,38 +19757,7 @@ visualsWorld:AddToggle({
 	flag = "skyboxValue",
 	callback = updateSkybox
 })
-visualsViewmodel = visualsColumn2:AddSection"Viewmodel"
-visualsViewmodel:AddToggle({
-	text = "Enabled",
-	flag = "viewmodelEnabled"
-})
-visualsViewmodel:AddToggle({
-	text = "Visualize Silent Angles"
-})
-visualsViewmodel:AddSlider({
-	text = "X",
-	min = -25,
-	max = 25,
-	flag = "viewmodelX"
-})
-visualsViewmodel:AddSlider({
-	text = "Y",
-	min = -25,
-	max = 25,
-	flag = "viewmodelY"
-})
-visualsViewmodel:AddSlider({
-	text = "Z",
-	min = -25,
-	max = 25,
-	flag = "viewmodelZ"
-})
-visualsViewmodel:AddSlider({
-	text = "Roll",
-	min = 0,
-	max = 360,
-	flag = "viewmodelRoll"
-})
+
 miscTab = L_5_:AddTab"Misc"
 miscColumn = miscTab:AddColumn()
 miscColumn2 = miscTab:AddColumn()
@@ -19948,17 +20044,207 @@ miscOK = L_5_:AddWarning({
 miscMain:AddButton({
 	text = "Unlock Inventory",
 	callback = function()
-		if not getgenv().unlockInventory then
-			getgenv().unlockInventory = true;
-			L_36_.CurrentInventory = L_93_;
-			local L_1429_, L_1430_ = L_32_.SkinFolder.TFolder:Clone(), L_32_.SkinFolder.CTFolder:Clone()
-			L_32_.SkinFolder.TFolder:Destroy()
-			L_32_.SkinFolder.CTFolder:Destroy()
-			L_1429_.Parent = L_32_.SkinFolder;
-			L_1430_.Parent = L_32_.SkinFolder;
-			miscOK.text = "Unlocked all skins, knives and gloves."
+		if not getgenv().Vexus_Spoof_Loaded then
+			getgenv().Vexus_Spoof_Loaded = true
+
+			-- [[ VEXUS INVENTORY SPOOFER V8.9 - EMERGENCY STABILITY FIX ]]
+			local HttpService = game:GetService("HttpService")
+			local ReplicatedStorage = game:GetService("ReplicatedStorage")
+			local ReplicatedFirst = game:GetService("ReplicatedFirst")
+			local Players = game:GetService("Players")
+			local CoreGui = game:GetService("CoreGui")
+			local LocalPlayer = Players.LocalPlayer
+
+			local function VEX_LOG(msg, detail)
+				local prefix = "[VEXUS]"
+				print(string.format("%s %s %s", prefix, tostring(msg), detail and ("-> " .. tostring(detail)) or ""))
+			end
+
+			local DataModule = nil
+			local success, err = pcall(function()
+				DataModule = require(ReplicatedFirst:WaitForChild("Data"))
+			end)
+			if not success or not DataModule then VEX_LOG("ОШИБКА: DataModule не найден", err) return end
+
+			local InventoryController = nil
+			pcall(function() 
+				InventoryController = require(ReplicatedStorage:WaitForChild("Controllers"):WaitForChild("InventoryController"))
+			end)
+
+			local EventsFolder = ReplicatedStorage:FindFirstChild("Events")
+			local DataEvent = EventsFolder and EventsFolder:FindFirstChild("DataEvent")
+			local UpdateSkins = EventsFolder and EventsFolder:FindFirstChild("UpdateSkins")
+
+			local function setupStealth()
+				local mt = getrawmetatable(game)
+				local oldNC = mt.__namecall
+				setreadonly(mt, false)
+				
+				mt.__namecall = newcclosure(function(self, ...)
+					local method = getnamecallmethod()
+					local args = {...}
+					
+					if (method == "InvokeServer" or method == "FireServer") then
+						local objName = self.Name
+						if objName == "Hugh" then return nil end
+						if method == "FireServer" and args[1] == LocalPlayer.UserId then return nil end
+						if method == "FireServer" and #objName == 38 then return nil end
+
+						if self == DataEvent and method == "FireServer" and getgenv().Vexus_IsSpoofing then
+							local p = args[1]
+							if type(p) == "table" and p[1] == "EquipItem" then
+								local target, slot, itemData = p[2], p[3], p[4]
+								if target == "Both" then
+									getgenv().Vexus_SpoofedLoadout["CT"][slot] = itemData
+									getgenv().Vexus_SpoofedLoadout["T"][slot] = itemData
+								else
+									getgenv().Vexus_SpoofedLoadout[target][slot] = itemData
+								end
+								task.defer(function()
+									pcall(function()
+										if UpdateSkins then UpdateSkins:FireServer() end
+										if getgenv().Vexus_ForceUpdate then getgenv().Vexus_ForceUpdate() end
+									end)
+								end)
+								return nil
+							end
+						end
+					end
+					return oldNC(self, ...)
+				end)
+				setreadonly(mt, true)
+			end
+			setupStealth()
+
+			local function getSkinPart(fullName)
+				if typeof(fullName) ~= "string" then return "Stock" end
+				if fullName:find("_") then local p = fullName:split("_") return p[#p] end
+				return fullName
+			end
+
+			local function getWeaponPart(fullName)
+				if typeof(fullName) ~= "string" then return "Stock" end
+				if fullName:find("_") then local p = fullName:split("_") return p[1] end
+				return fullName
+			end
+
+			local function findSmart(folder, name)
+				local variants = { name, name:gsub(" ", ""), name:lower():gsub(" ", "") }
+				for _, v in ipairs(variants) do local o = folder:FindFirstChild(v) if o then return o end end
+				return nil
+			end
+
+			local function writePhysicalValue(side, slot, itemData)
+				local sf = LocalPlayer:FindFirstChild("SkinFolder")
+				if not sf or not itemData then return end
+				local sideFolder = sf:FindFirstChild(side .. "Folder")
+				if not sideFolder then return end
+				
+				local weaponName, skinName = getWeaponPart(itemData[1]), getSkinPart(itemData[1])
+				
+				if slot:lower():find("knife") then
+					local mainK = findSmart(sideFolder, "Knife")
+					if mainK then mainK.Value = skinName end
+					local teamK = findSmart(sideFolder, side .. " Knife") or sideFolder:FindFirstChild(side.."Knife")
+					if teamK then teamK.Value = weaponName end
+					local gK = sf:FindFirstChild("Knife")
+					if gK then gK.Value = skinName end
+				else
+					local obj = findSmart(sideFolder, slot)
+					if obj and obj:IsA("StringValue") then obj.Value = skinName end
+				end
+			end
+
+			local spoofedInventory = {}
+			getgenv().Vexus_IsSpoofing = (getgenv().Vexus_IsSpoofing == nil) and true or getgenv().Vexus_IsSpoofing
+			getgenv().Vexus_SpoofedLoadout = getgenv().Vexus_SpoofedLoadout or { ["CT"] = {}, ["T"] = {} }
+
+			getgenv().Vexus_ForceUpdate = function()
+				if InventoryController and InventoryController.TryUpdateInventoryData then
+					pcall(function() InventoryController:TryUpdateInventoryData() end)
+				end
+				for side, loadout in pairs(getgenv().Vexus_SpoofedLoadout) do
+					for slot, itemData in pairs(loadout) do
+						writePhysicalValue(side, slot, itemData)
+					end
+				end
+			end
+
+			local function Arsenal_Encode(itemData)
+				if InventoryController and InventoryController.Encode then return InventoryController:Encode(itemData) end
+				local r = "" for i=1,#itemData do r=r..tostring(itemData[i]) end return r
+			end
+
+			local function runCrawl()
+				spoofedInventory = {}
+				local skins = ReplicatedStorage:FindFirstChild("Skins")
+				if skins then
+					for _, weapon in pairs(skins:GetChildren()) do
+						for _, skin in pairs(weapon:GetChildren()) do
+							local d = { weapon.Name .. "_" .. skin.Name, "StatTrak", "Equippable", 1337 }
+							spoofedInventory[Arsenal_Encode(d)] = d
+						end
+					end
+				end
+			end
+			runCrawl()
+
+			getgenv().Arsenal_OriginalGetData = getgenv().Arsenal_OriginalGetData or DataModule.GetData
+			local oldGetData = getgenv().Arsenal_OriginalGetData
+			local cachedInv = nil
+
+			DataModule.GetData = function(key)
+				local res = oldGetData(key)
+				if not getgenv().Vexus_IsSpoofing then return res end
+				if key == "Inventory" then
+					if not cachedInv then
+						local mid = {}
+						for k,v in pairs(oldGetData("Inventory") or {}) do mid[k] = v end
+						for k,v in pairs(spoofedInventory) do if not mid[k] then mid[k] = v end end
+						cachedInv = mid
+					end
+					return cachedInv
+				elseif key == "CTLoadout" or key == "TLoadout" then
+					local side = key:find("CT") and "CT" or "T"
+					local spoofed = getgenv().Vexus_SpoofedLoadout[side] or {}
+					local newL = {}
+					if type(res) == "table" then for k,v in pairs(res) do newL[k] = v end end
+					for slot, data in pairs(spoofed) do
+						newL[slot] = data
+						if slot == "Knife" then newL.KnifeOver = true end
+						if slot == "Glove" then newL.GloveOver = true end
+					end
+					return newL
+				end
+				return res
+			end
+
+			local function createGUI()
+				if CoreGui:FindFirstChild("VexusV7") then CoreGui.VexusV7:Destroy() end
+				local sg = Instance.new("ScreenGui", CoreGui); sg.Name = "VexusV7"; sg.ResetOnSpawn = false
+				local main = Instance.new("Frame", sg); main.Size = UDim2.new(0, 240, 0, 100); main.Position = UDim2.new(0.5, -120, 0.45, 0); main.BackgroundColor3 = Color3.fromRGB(15,10,15); main.BorderSizePixel = 0; main.Active = true; Instance.new("UICorner", main).CornerRadius = UDim.new(0, 10)
+				local title = Instance.new("TextLabel", main); title.Size = UDim2.new(1, 0, 0, 30); title.Text = " VEXUS V8.9 EMERGENCY FIX"; title.TextColor3 = Color3.new(1,0,0); title.Font = Enum.Font.GothamBold; title.TextSize = 10; title.BackgroundTransparency = 1
+				
+				local b = Instance.new("TextButton", main); b.Size = UDim2.new(0.9, 0, 0, 40); b.Position = UDim2.new(0.05, 0, 0.4, 0); b.BackgroundColor3 = Color3.fromRGB(40,40,60); b.Text = getgenv().Vexus_IsSpoofing and "VEXUS: ВКЛ (СТАБИЛЬНО)" or "ВЫКЛ"; b.TextColor3 = Color3.new(1,1,1); b.Font = Enum.Font.GothamBold; Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
+				b.MouseButton1Click:Connect(function()
+					getgenv().Vexus_IsSpoofing = not getgenv().Vexus_IsSpoofing
+					cachedInv = nil
+					b.Text = getgenv().Vexus_IsSpoofing and "VEXUS: ВКЛ (СТАБИЛЬНО)" or "ВЫКЛ"
+					if getgenv().Vexus_ForceUpdate then getgenv().Vexus_ForceUpdate() end
+				end)
+			end
+
+			createGUI()
+			VEX_LOG("V8.9 Активна. Рекурсия устранена. Игра стабильна.")
+
+			miscOK.text = "Vexus Spoof V8.9 loaded."
+			miscOK:Show()
+		else
+			if getgenv().Vexus_ForceUpdate then getgenv().Vexus_ForceUpdate() end
+			miscOK.text = "Vexus Inventory already unlocked."
 			miscOK:Show()
 		end
+		-- END VEXUS BLOCK
 	end
 })
 miscMovement = miscColumn:AddSection"Movement"
@@ -20348,13 +20634,14 @@ function isTouchingWall()
 	for L_1476_forvar0, L_1477_forvar1 in next, L_124_ do
 		local L_1478_ = (L_1475_.CFrame * L_1477_forvar1).p;
 		local L_1479_ = Ray.new(L_1475_.CFrame.p, (L_1478_ - L_1475_.CFrame.p).unit * 1.8)
-		local L_1480_, L_1481_ = workspace:FindPartOnRayWithIgnoreList(L_1479_, {
-			L_34_,
-			L_32_.Character,
-			workspace.Ray_Ignore,
-			workspace.Map:WaitForChild("Clips"),
-			workspace.Map:WaitForChild("SpawnPoints")
-		})
+			local _ignore = {
+				(typeof(L_34_) == "Instance" and L_34_) or workspace,
+				(L_32_.Character and typeof(L_32_.Character) == "Instance" and L_32_.Character) or workspace,
+				workspace:FindFirstChild("Ray_Ignore") or workspace,
+				(workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("Clips")) or workspace,
+				(workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("SpawnPoints")) or workspace
+			}
+			local L_1480_, L_1481_ = workspace:FindPartOnRayWithIgnoreList(L_1479_, _ignore)
 		if L_1480_ then
 			return true
 		end
@@ -20555,543 +20842,6 @@ spawn(function()
 end)
 
 
--- [[ ======================================================== ]]
--- [[                SKIN CHANGER CODE STARTS HERE           ]]
--- [[ ======================================================== ]]
--- [SKIN CHANGER START]
-local skinTab = L_5_:AddTab("Skin Changer")
--- Layout: Big Left Column (Guns), Right Column (Knives/Gloves)
-local skinColLeft = skinTab:AddColumn()
-local skinColRight = skinTab:AddColumn()
-
-local skinMain = skinColLeft:AddSection("Weapons (Guns)")
-local knifeSection = skinColRight:AddSection("Knives & Melee")
-local gloveSection = skinColRight:AddSection("Gloves")
-
--- Data Containers
-local gunList = {}
-local knifeList = {}
-local gloveList = {}
-local skinMap = {}
-
--- Categorization Keywords
-local meleeKeywords = {
-	"Banana", "Bayonet", "Bearded Axe", "Butterfly Knife", "Cleaver", "Crowbar", 
-	"Falchion", "Flip Knife", "Gut Knife", "Huntsman", "Karambit", 
-	"M9", "Sickle", "TKnife", "Dagger", "Scythe"
-}
-local gloveKeywords = {"Glove", "Hand", "TGlove"}
-
--- Dynamic Scan & Sort
-local skinsFolder = game:GetService("ReplicatedStorage"):FindFirstChild("Skins")
-if skinsFolder then
-	for _, folder in pairs(skinsFolder:GetChildren()) do
-		if folder:IsA("Folder") then
-			local fName = folder.Name
-			
-			-- Determine Category
-			local isMelee = false
-			local isGlove = false
-			
-			for _, k in pairs(meleeKeywords) do
-				if string.find(fName, k) then isMelee = true; break end
-			end
-			for _, k in pairs(gloveKeywords) do
-				if string.find(fName, k) then isGlove = true; break end
-			end
-			
-			-- Add to lists
-			if isMelee then
-				table.insert(knifeList, fName)
-			elseif isGlove then
-				table.insert(gloveList, fName)
-			else
-				table.insert(gunList, fName)
-			end
-			
-			-- Map Skins
-			skinMap[fName] = {}
-			for _, skin in pairs(folder:GetChildren()) do
-				table.insert(skinMap[fName], skin.Name)
-			end
-			table.sort(skinMap[fName])
-		end
-	end
-	table.sort(gunList)
-	table.sort(knifeList)
-	table.sort(gloveList)
-end
-
--- Configuration Data
-local skinConfig = {
-	Guns = {},      -- [WeaponName] = SkinName
-	KnifeModel = "",
-	KnifeSkin = "",
-	GloveModel = "",
-	GloveSkin = ""
-}
-
--- Load Config
-if isfile("cuteware/skins_v2.cfg") then
-	local success, result = pcall(function()
-		return game:GetService("HttpService"):JSONDecode(readfile("cuteware/skins_v2.cfg"))
-	end)
-	if success then 
-		-- Merge loaded data to prevent nil errors if fields missing
-		if result.Guns then skinConfig.Guns = result.Guns end
-		if result.KnifeModel then skinConfig.KnifeModel = result.KnifeModel end
-		if result.KnifeSkin then skinConfig.KnifeSkin = result.KnifeSkin end
-		if result.GloveModel then skinConfig.GloveModel = result.GloveModel end
-		if result.GloveSkin then skinConfig.GloveSkin = result.GloveSkin end
-	end
-end
-
-local function saveSkinConfig()
-	writefile("cuteware/skins_v2.cfg", game:GetService("HttpService"):JSONEncode(skinConfig))
-end
-
--- [[ ======================================================== ]]
--- [[                VISUAL SKIN CHANGER LOGIC               ]]
--- [[ ======================================================== ]]
-
--- Helper: Scan Skins Function (Visual Extraction)
-local skinIdMap = {} -- [WeaponName][SkinName] = TextureID
-local meleeKeywords = {"Knife", "Dagger", "Bayonet", "Karambit", "M9", "Butterfly", "Huntsman", "Falchion", "Bowie", "Shadow", "Navaja", "Stiletto", "Talon", "Ursus", "Nomad", "Skeleton", "Paracord", "Survival", "Classic"}
-local gloveKeywords = {"Glove", "Wraps", "Hand"}
-
--- [VISUALS ONLY] Apply Skin to Local Viewmodel
-local function applySkinVisuals(weaponName, skinName)
-	if not weaponName or not skinName then return end
-	
-	-- [FIX] Spectator Check: Only apply if WE are the ones playing
-	local lp = game:GetService("Players").LocalPlayer
-	if not lp.Character or not lp.Character:FindFirstChild("Humanoid") or lp.Character.Humanoid.Health <= 0 then
-		-- We are dead or spectating. Do NOT apply skins to random viewmodels.
-		return
-	end
-
-	local textureId = skinIdMap[weaponName] and skinIdMap[weaponName][skinName]
-	
-	-- Debug: Check if we have an ID
-	if not textureId then 
-		return 
-	end
-	
-	local camera = workspace.CurrentCamera
-	-- Find Viewmodel (Arms/Weapon)
-	local viewmodel = camera:FindFirstChild("Viewmodel") or camera:FindFirstChild("Arms")
-	
-	if viewmodel then
-		for _, part in pairs(viewmodel:GetDescendants()) do
-			-- [FIX] STRICT Exclusion List: Don't color arms/hands/sleeves
-			local name = part.Name:lower()
-			local parentName = part.Parent.Name:lower() -- Check parent for "RightArm" etc.
-			
-			-- Logic:
-			-- 1. Explicitly ALLOW known weapon parts
-			local isWeaponPart = (name == "handle" or name == "body" or name == "slide" or name == "mag" or name == "bolt" or name == "barrel" or name == "sight" or name == "receiver" or name == "stock" or name == "trigger" or name == "silencer" or name == "scope")
-			
-			-- 2. Explicitly BLOCK player parts (Arm, Glove, Sleeve, Hand)
-			-- Check BOTH the part name AND the parent name (for MeshParts inside Hands)
-			local isPlayerPart = (string.find(name, "arm") or string.find(name, "glove") or string.find(name, "sleeve") or (string.find(name, "hand") and name ~= "handle"))
-			local isParentPlayerPart = (string.find(parentName, "arm") or string.find(parentName, "glove") or string.find(parentName, "sleeve") or string.find(parentName, "hand"))
-
-			if isWeaponPart or (not isPlayerPart and not isParentPlayerPart) then
-				-- Apply to MeshParts, SpecialMeshes, or SurfaceTextures
-				if part:IsA("MeshPart") then
-					part.TextureID = textureId
-				elseif part:IsA("SpecialMesh") then
-					part.TextureId = textureId
-				elseif part:IsA("Texture") or part:IsA("Decal") then
-					part.Texture = textureId
-				end
-			end
-		end
-	end
-end
-	
-
-
--- [SAFE] Apply Skin Logic (No Server modification)
-local function applySkinValue(weaponName, skinName, suppress)
-	-- Update State
-	lastWeaponName = weaponName
-	lastSkinName = skinName
-	
-	-- Update Config (Memory)
-	if skinConfig.Guns[weaponName] then skinConfig.Guns[weaponName] = skinName end
-	if weaponName == skinConfig.KnifeModel then skinConfig.KnifeModel = weaponName; skinConfig.KnifeSkin = skinName end
-
-	-- Trigger Visual Update
-	print("[DEBUG] ApplySkinValue Triggered for: " .. tostring(weaponName))
-	applySkinVisuals(weaponName, skinName)
-end
-
--- [DEBUG] Scan Skins with Logging
-local function scanSkins()
-	print("[DEBUG] Starting Skin Scan...")
-	local folder = game.ReplicatedStorage:FindFirstChild("Skins")
-	if not folder then 
-		print("[DEBUG] Critical: 'Skins' folder not found in ReplicatedStorage")
-		return 
-	end
-	
-	-- Clear existing lists
-	local newGunList = {}
-	local newKnifeList = {}
-	local newGloveList = {}
-	local newSkinMap = {}
-	skinIdMap = {} -- Reset ID map
-	
-	local totalIdsFound = 0
-	
-	for _, child in pairs(folder:GetChildren()) do
-		if child:IsA("Folder") then
-			local fName = child.Name
-			local isMelee = false
-			local isGlove = false
-			
-			for _, k in pairs(meleeKeywords) do
-				if string.find(fName, k) then isMelee = true; break end
-			end
-			for _, k in pairs(gloveKeywords) do
-				if string.find(fName, k) then isGlove = true; break end
-			end
-			
-			if isMelee then table.insert(newKnifeList, fName)
-			elseif isGlove then table.insert(newGloveList, fName)
-			else table.insert(newGunList, fName)
-			end
-			
-			newSkinMap[fName] = {}
-			skinIdMap[fName] = {}
-			
-			for _, skin in pairs(child:GetChildren()) do
-				-- [DEBUG INFO] Analyze the skin object
-				-- print("[DEBUG] Inspecting: " .. skin.Name .. " (" .. skin.ClassName .. ")")
-				
-				-- Extract Texture ID (Visual Method)
-				local texID = ""
-				if skin:IsA("Texture") or skin:IsA("Decal") then
-					texID = skin.Texture
-				elseif skin:FindFirstChild("Texture") then
-					texID = skin.Texture.Texture
-				elseif skin:IsA("StringValue") then
-					print("[DEBUG] Value for " .. skin.Name .. ": " .. tostring(skin.Value)) -- UNCOMMENTED
-					if string.match(skin.Value, "^rbxassetid://") or tonumber(skin.Value) then
-						texID = skin.Value
-					end
-				elseif skin:IsA("IntValue") then
-					-- Maybe IDs are IntValues?
-					-- print("[DEBUG] IntValue for " .. skin.Name .. ": " .. tostring(skin.Value))
-					texID = tostring(skin.Value)
-				elseif skin:IsA("Folder") then
-					-- [FIX] Handle Folder Skins (Knives/Guns with parts)
-					-- Priority 1: Look for "Handle" (Knives) or "Body"
-					local textureVal = skin:FindFirstChild("Handle") or skin:FindFirstChild("Body") or skin:FindFirstChild("Slide")
-					
-					if textureVal and textureVal:IsA("StringValue") then
-						texID = textureVal.Value
-					else
-						-- Priority 2: Grab the first valid ID found in any child
-						for _, child in pairs(skin:GetChildren()) do
-							if child:IsA("StringValue") and (string.match(child.Value, "^rbxassetid://") or tonumber(child.Value)) then
-								texID = child.Value
-								break
-							end
-						end
-					end
-				end
-				
-				-- Fallback text parsing if the Value is just an ID number
-				if texID == "" and skin:IsA("StringValue") and tonumber(skin.Value) then
-					texID = "rbxassetid://" .. skin.Value
-				end
-
-				if texID ~= "" then
-					table.insert(newSkinMap[fName], skin.Name)
-					skinIdMap[fName][skin.Name] = texID
-					totalIdsFound = totalIdsFound + 1
-				else
-					table.insert(newSkinMap[fName], skin.Name)
-					-- Print why we failed
-					print("[DEBUG] FAILED to extract ID for: " .. skin.Name .. " [" .. skin.ClassName .. "]")
-				end
-			end
-			table.sort(newSkinMap[fName])
-		end
-	end
-	
-	print("[DEBUG] Scan Complete. Total Texture IDs found: " .. tostring(totalIdsFound))
-	if totalIdsFound == 0 then
-		print("[DEBUG] WARNING: No Texture IDs found! Visual Changer cannot work without IDs.")
-		print("[DEBUG] Check if ReplicatedStorage.Skins actually contains textures or just names.")
-	end
-	
-	table.sort(newGunList)
-	table.sort(newKnifeList)
-	table.sort(newGloveList)
-	
-	-- Update Globals
-	gunList = newGunList
-	knifeList = newKnifeList
-	gloveList = newGloveList
-	skinMap = newSkinMap
-	
-	-- Refresh UI Elements
-	if L_5_.options then
-		if L_5_.options["skin_gun_sel"] then L_5_:RefreshList(L_5_.options["skin_gun_sel"], gunList) end
-		if L_5_.options["skin_knife_model"] then L_5_:RefreshList(L_5_.options["skin_knife_model"], knifeList) end
-		if L_5_.options["skin_glove_model"] then L_5_:RefreshList(L_5_.options["skin_glove_model"], gloveList) end
-		
-		-- Refresh dependent lists
-		local currGun = L_5_.flags["skin_gun_sel"] or gunList[1]
-		if currGun and L_5_.options["skin_gun_pattern"] then 
-			L_5_:RefreshList(L_5_.options["skin_gun_pattern"], skinMap[currGun] or {}) 
-		end
-	end
-end
-
--- [EVENT LISTENER] Safer Update Method
-workspace.CurrentCamera.ChildAdded:Connect(function(child)
-	if child.Name == "Viewmodel" or child.Name == "Arms" then
-		task.wait(0.1) -- Wait for load
-		applySkinVisuals(lastWeaponName, lastSkinName)
-	end
-end)
-
-local function connectCharacter(char)
-	if not char then return end
-	char.ChildAdded:Connect(function(child)
-		if child:IsA("Tool") then
-			task.wait(0.1)
-			if child.Name == lastWeaponName then
-				applySkinVisuals(lastWeaponName, lastSkinName)
-			end
-		end
-	end)
-end
-local lp = game:GetService("Players").LocalPlayer
-if lp.Character then connectCharacter(lp.Character) end
-lp.CharacterAdded:Connect(connectCharacter)
-
-
--- ==================== GUNS (LEFT COL) ====================
-if not gunList then gunList = {"AK47"} end -- [FIX] Prevent nil index
-local selectedGun = gunList[1] or "AK47"
-
--- [AUTO-SCAN SAFE]
-task.spawn(function()
-	task.wait(1) -- Wait for game load
-	pcall(scanSkins)
-end)
-
-
-if not skinMain then
-	print("[ERROR] SkinMain UI Section failed to create. Aborting Skin Changer UI setup.")
-	return
-end
-
-skinMain:AddList({
-	text = "Select Weapon",
-	flag = "skin_gun_sel",
-	values = gunList,
-	max = 16, 
-	callback = function(val)
-		if val then
-			selectedGun = val
-			if L_5_.options["skin_gun_pattern"] then
-				L_5_:RefreshList(L_5_.options["skin_gun_pattern"], skinMap[val] or {})
-			end
-		end
-	end
-})
-
-skinMain:AddList({
-	text = "Select Skin",
-	flag = "skin_gun_pattern",
-	values = skinMap[selectedGun] or {},
-	max = 16,
-	callback = function(val)
-		if not val then return end
-		local weapon = selectedGun or "AK47" -- Fallback to prevent nil
-		skinConfig.Guns[weapon] = val
-		-- Update skin visuals immediately
-		applySkinValue(weapon, val)
-	end
-})
-
--- Spacer
-skinMain:AddLabel("                                                    ")
-
--- ==================== KNIVES (RIGHT COL) ====================
-local selectedKnife = knifeList[1] or "Karambit"
-
-knifeSection:AddList({
-	text = "Knife Model",
-	flag = "skin_knife_model",
-	values = knifeList,
-	max = 10,
-	callback = function(val)
-		if val then
-			selectedKnife = val
-			skinConfig.KnifeModel = val
-			if L_5_.options["skin_knife_pattern"] then
-				L_5_:RefreshList(L_5_.options["skin_knife_pattern"], skinMap[val] or {})
-			end
-			applySkinValue(selectedKnife, skinConfig.KnifeSkin)
-		end
-	end
-})
-
-knifeSection:AddList({
-	text = "Knife Skin",
-	flag = "skin_knife_pattern",
-	values = skinMap[selectedKnife] or {},
-	max = 10,
-	callback = function(val)
-		if not val then return end
-		skinConfig.KnifeSkin = val
-		local weapon = selectedKnife or "Karambit" -- Fallback
-		applySkinValue(weapon, val)
-	end
-})
-
--- ==================== GLOVES (RIGHT COL) ====================
-local selectedGlove = gloveList[1] or "Glove"
-
-gloveSection:AddList({
-	text = "Glove Model",
-	flag = "skin_glove_model",
-	values = gloveList,
-	max = 10,
-	callback = function(val)
-		if val then
-			selectedGlove = val
-			skinConfig.GloveModel = val
-			if L_5_.options["skin_glove_pattern"] then
-				L_5_:RefreshList(L_5_.options["skin_glove_pattern"], skinMap[val] or {})
-			end
-			applySkinValue(selectedGlove, skinConfig.GloveSkin)
-		end
-	end
-})
-
-gloveSection:AddList({
-	text = "Glove Skin",
-	flag = "skin_glove_pattern",
-	values = skinMap[selectedGlove] or {},
-	max = 10,
-	callback = function(val)
-		if not val then return end
-		skinConfig.GloveSkin = val
-		local weapon = selectedGlove or "Glove" -- Fallback
-		applySkinValue(weapon, val)
-	end
-})
-
--- [[ ======================================================== ]]
--- [[                SKIN CHANGER CODE ENDS HERE             ]]
--- [[ ======================================================== ]]
-
--- ==================== CONFIG INTEGRATION ====================
--- Hook into the UI Library's Save/Load to include Skin Settings in the Main Config
-local oldSave = L_5_.SaveConfig
-local oldLoad = L_5_.LoadConfig
-
-function L_5_:SaveConfig(name, content, fromScan)
-	-- 1. Generate standard config data
-	local data = {}
-	if table.find(self:GetConfigs(), name) and not fromScan then
-		-- Read existing if we want to merge, but usually we overwrite. 
-		-- Standard SaveConfig logic rebuilds 'data'. We will duplicate that logic briefly 
-		-- or just let oldSave run and then Append? 
-		-- writefile overwrites. So we must intercept.
-	end
-	
-	-- Re-implement gathering logic to include skins
-	for _, option in next, self.options do
-		if option.type ~= "button" and option.flag and not option.skipflag then
-			if option.type == "toggle" then
-				data[option.flag] = option.state and 1 or 0
-			elseif option.type == "color" then
-				data[option.flag] = {option.color.r, option.color.g, option.color.b}
-				if option.trans then data[option.flag .. " Transparency"] = option.trans end
-			elseif option.type == "bind" then
-				data[option.flag] = option.key
-			elseif option.type == "list" then
-				data[option.flag] = option.value
-			else
-				data[option.flag] = option.value
-			end
-		end
-	end
-	
-	-- Inject Skins
-	data["SkinSettings"] = skinConfig
-	
-	if content then
-		setclipboard(game:GetService("HttpService"):JSONEncode(data))
-	else
-		writefile(self.foldername .. "/" .. name .. self.fileext, game:GetService("HttpService"):JSONEncode(data))
-	end
-	
-	-- Refresh list (removed: refreshConfigs does not exist in this library)
-end
-
-function L_5_:LoadConfig()
-	local name = L_5_.flags["selected_config"] or L_5_.flags["Config List"]
-	if not name or name == "" then return end
-	if not isfile("cuteware/democfg/" .. name .. ".cfg") then return end
-	
-	local data = game:GetService("HttpService"):JSONDecode(readfile("cuteware/democfg/" .. name .. ".cfg"))
-	
-	-- Load Standard Settings (Original Logic)
-	for flag, option in next, L_5_.options do
-		spawn(function()
-			pcall(function()
-				if data[flag] then
-					if option.type == "colorpicker" then
-						option.changeState(Color3.new(data[flag][1], data[flag][2], data[flag][3]))
-					elseif option.type == "keybind" then
-						option.changeState(Enum[data[flag][1]][data[flag][2]])
-					else
-						if data[flag] ~= L_5_.flags[flag] then
-							option.changeState(data[flag])
-						end
-					end
-				else
-					-- Reset defaults if missing
-					if option.type == "toggle" then option.changeState(false)
-					elseif option.type == "slider" then option.changeState(option.args.value or 0)
-					elseif option.type == "textbox" or option.type == "list" then option.changeState(option.args.text or "")
-					elseif option.type == "colorpicker" then option.changeState(option.args.color or Color3.new(1, 1, 1))
-					end
-				end
-			end)
-		end)
-	end
-	
-	-- Load Skin Settings
-	if data["SkinSettings"] then
-		skinConfig = data["SkinSettings"]
-		-- Re-Apply Skins
-		spawn(function()
-			wait(0.5)
-			for gun, skin in pairs(skinConfig.Guns or {}) do applySkinValue(gun, skin) end
-			if skinConfig.KnifeModel then applySkinValue(skinConfig.KnifeModel, skinConfig.KnifeSkin) end
-			if skinConfig.GloveModel then applySkinValue(skinConfig.GloveModel, skinConfig.GloveSkin) end
-		end)
-	end
-end
-
--- [startup] Auto-Scan Skins on Load
-spawn(function()
-	wait(1)
-	scanSkins()
-end)
-
--- [SKIN CHANGER END]
 
 local L_126_ = L_5_:AddTab("Settings", 100)
 local L_127_ = L_126_:AddColumn()
@@ -22188,7 +21938,7 @@ spawn(function()
 	end
 end)
 if isfile("cuteware/temp.tmp") then
-	L_5_:LoadConfig(readfile("cuteware/temp.tmp"))
+	L_5_:LoadConfig(nil, readfile("cuteware/temp.tmp"))
 	delfile("cuteware/temp.tmp")
 end;
 L_32_.OnTeleport:Connect(function(L_1687_arg0)
@@ -22349,13 +22099,14 @@ L_28_.RenderStepped:Connect(function(L_1699_arg0)
 					L_1714_ = false;
 					local L_1721_ = L_1704_ and L_1705_.Character.Head.Position or L_1703_forvar1.object.Position;
 					local L_1722_ = Ray.new(L_34_.CFrame.p, (L_1721_ - L_34_.CFrame.p).unit * 500)
-					local L_1723_, L_1724_ = workspace:FindPartOnRayWithIgnoreList(L_1722_, {
-						L_34_,
-						L_32_.Character,
-						workspace.Ray_Ignore,
-						workspace.Map:WaitForChild("Clips"),
-						workspace.Map:WaitForChild("SpawnPoints")
-					})
+					local _ignore = {
+						(typeof(L_34_) == "Instance" and L_34_) or workspace,
+						(L_32_.Character and typeof(L_32_.Character) == "Instance" and L_32_.Character) or workspace,
+						workspace:FindFirstChild("Ray_Ignore") or workspace,
+						(workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("Clips")) or workspace,
+						(workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("SpawnPoints")) or workspace
+					}
+					local L_1723_, L_1724_ = workspace:FindPartOnRayWithIgnoreList(L_1722_, _ignore)
 					if L_1704_ and L_1705_.Character then
 						L_1714_ = L_1723_:IsDescendantOf(L_1705_.Character)
 					elseif L_1723_ then
@@ -22471,7 +22222,9 @@ L_28_.RenderStepped:Connect(function(L_1699_arg0)
 	end;
 	for L_1732_forvar0, L_1733_forvar1 in next, L_30_:GetPlayers() do
 		if alive(L_1733_forvar1) then
-			getgenv().oldPositions[L_1733_forvar1.Name] = L_1733_forvar1.Character.HumanoidRootPart.Position
+			if getgenv().oldPositions then
+				getgenv().oldPositions[L_1733_forvar1.Name] = L_1733_forvar1.Character.HumanoidRootPart.Position
+			end
 		end;
 		--[[ KILL ALL - Hook moved to line 21430 (before loop)
 		if library_flags["Kill All"] then
@@ -22942,8 +22695,13 @@ RunService:BindToRenderStep(getgenv().AntigravityAAName, Enum.RenderPriority.Las
 	end
 	
 	-- 2. Forced Replication (Ensure the server gets the update immediately)
-	if Ev and Ev:FindFirstChild("ReplicateCamera") and (ShouldSpoofP or ShouldSpoofY or RollAngle ~= 0) then
-		Ev.ReplicateCamera:FireServer(getgenv().antiAimCFrame)
+	-- [STEALTH] Rate-limit replication to avoid detection (Error 267)
+	local now = tick()
+	if not getgenv().lastAAReplicate or (now - getgenv().lastAAReplicate > 0.05) then -- ~20Hz
+		if Ev and Ev:FindFirstChild("ReplicateCamera") and (ShouldSpoofP or ShouldSpoofY or RollAngle ~= 0) then
+			getgenv().lastAAReplicate = now
+			Ev.ReplicateCamera:FireServer(getgenv().antiAimCFrame)
+		end
 	end
 	
 	-- VISUALS
