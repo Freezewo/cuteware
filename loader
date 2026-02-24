@@ -3,10 +3,12 @@ local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
 
-
+-- =======================================================
+-- ⚙️ НАСТРОЙКИ ССЫЛОК (ВСТАВЬ СВОИ ССЫЛКИ С GITHUB СЮДА)
+-- =======================================================
 local URL_LATEST = "https://raw.githubusercontent.com/Freezewo/cuteware/refs/heads/main/cuteware.xyz"
-local URL_BETA   = "https://raw.githubusercontent.com/Freezewo/cuteware/refs/heads/main/beta"
-
+local URL_BETA   = "https://raw.githubusercontent.com/Freezewo/cuteware/refs/heads/main/alora"
+-- =======================================================
 
 local function cleanAll()
     for _, gui in ipairs(CoreGui:GetChildren()) do
@@ -205,7 +207,7 @@ end
 -- =======================================================
 -- DROPDOWN OPTIONS
 -- =======================================================
-local opts = {"Latest build", "Beta build"}
+local opts = {"Cuteware", "Alora"}
 local selOpt = 1
 local ddOpen = false
 
