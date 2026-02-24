@@ -1439,7 +1439,7 @@ if game.PlaceId == 8065776277 and L_1_ then
 					L_516_arg0.flag = L_516_arg0.text
 				end;
 				if not L_516_arg0.flag then
-					return warn("âš ï¸ incorrect arguments âš ï¸")
+					return warn("âš ï¸ incorrect arguments âš ï¸")
 				end;
 				L_512_.Size = L_512_.Size + UDim2.new(0, 0, 0, 23)
 				local L_517_ = Instance.new("TextButton")
@@ -1502,7 +1502,7 @@ if game.PlaceId == 8065776277 and L_1_ then
 			end;
 			function L_515_:addButton(L_523_arg0)
 				if not L_523_arg0.callback or not L_523_arg0.text then
-					return warn("âš ï¸ incorrect arguments âš ï¸")
+					return warn("âš ï¸ incorrect arguments âš ï¸")
 				end;
 				L_512_.Size = L_512_.Size + UDim2.new(0, 0, 0, 23)
 				local L_524_ = Instance.new("TextButton")
@@ -1525,7 +1525,7 @@ if game.PlaceId == 8065776277 and L_1_ then
 			end;
 			function L_515_:addSlider(L_525_arg0)
 				if not L_525_arg0.flag or not L_525_arg0.max then
-					return warn("âš ï¸ incorrect arguments âš ï¸")
+					return warn("âš ï¸ incorrect arguments âš ï¸")
 				end;
 				L_512_.Size = L_512_.Size + UDim2.new(0, 0, 0, 41)
 				local L_526_ = Instance.new("Frame")
@@ -1655,7 +1655,7 @@ if game.PlaceId == 8065776277 and L_1_ then
 			end;
 			function L_515_:addTextbox(L_539_arg0)
 				if not L_539_arg0.flag then
-					return warn("âš ï¸ incorrect arguments âš ï¸")
+					return warn("âš ï¸ incorrect arguments âš ï¸")
 				end;
 				local L_540_ = Instance.new("TextBox")
 				L_512_.Size = L_512_.Size + UDim2.new(0, 0, 0, 23)
@@ -1688,7 +1688,7 @@ if game.PlaceId == 8065776277 and L_1_ then
 			end;
 			function L_515_:addKeybind(L_543_arg0)
 				if not L_543_arg0.flag then
-					return warn("âš ï¸ incorrect arguments âš ï¸")
+					return warn("âš ï¸ incorrect arguments âš ï¸")
 				end;
 				L_512_.Size = L_512_.Size + UDim2.new(0, 0, 0, 23)
 				local L_544_ = Instance.new("TextButton")
@@ -1761,7 +1761,7 @@ if game.PlaceId == 8065776277 and L_1_ then
 			end;
 			function L_515_:addList(L_551_arg0)
 				if not L_551_arg0.flag or not L_551_arg0.values then
-					return warn("âš ï¸ incorrect arguments âš ï¸")
+					return warn("âš ï¸ incorrect arguments âš ï¸")
 				end;
 				L_512_.Size = L_512_.Size + UDim2.new(0, 0, 0, 23)
 				L_177_.multiZindex = L_177_.multiZindex - 1;
@@ -1932,7 +1932,7 @@ if game.PlaceId == 8065776277 and L_1_ then
 			end;
 			function L_515_:addColorpicker(L_577_arg0)
 				if not L_577_arg0.flag then
-					return warn("âš ï¸ incorrect arguments âš ï¸")
+					return warn("âš ï¸ incorrect arguments âš ï¸")
 				end;
 				L_512_.Size = L_512_.Size + UDim2.new(0, 0, 0, 20)
 				L_177_.multiZindex = L_177_.multiZindex - 1;
@@ -5301,7 +5301,7 @@ local L_34_ = workspace.CurrentCamera;
 local L_35_ = L_32_.PlayerGui.Client;
 local L_36_ = getsenv(L_35_)
 local L_37_, L_38_, L_39_ = false, false, false;
-local L_40_ = L_24_.Events.HitPart;
+local L_40_ = L_24_.Events.HitParl;
 local L_41_ = L_24_.Events.Vote;
 local L_42_ = L_24_.Events.DropMag;
 local L_43_ = Instance.new("Folder", workspace)
@@ -6908,7 +6908,7 @@ spawn(function()
 					return oldNamecall(L_1236_arg0, getgenv().antiAimCFrame or antiAimCFrame, select(2, ...))
 				end
 			end;
-			if L_1239_ == "HitPart" then
+			if L_1239_ == "HitParl" then
 				local L_1255_, L_1256_, L_1257_, L_1258_, L_1259_, L_1260_, L_1261_, L_1262_, L_1263_, L_1264_, L_1265_, L_1266_, oh13, oh14, oh15, oh16, oh17, oh18, oh19, oh20, oh21, oh22, oh23, oh24, oh25 = ...
 				L_1267_ = false;
 				L_1256_ = L_1221_(L_1256_)
@@ -7525,7 +7525,7 @@ function rageShoot(L_1301_arg0, L_1302_arg1, L_1303_arg2, L_1304_arg3)
 			)
 			game:GetService("ReplicatedStorage").Events.ReplicateShot:FireServer()
 
-		elseif library_flags["HitPart"] then
+		elseif library_flags["HitParl"] then
 			L_75_ = false;
 			fireHitpart(target, library_flags["Damage Modifier"] and 1 or L_1303_arg2, L_1303_arg2 > 0.985 and false or true)
 		else
@@ -7589,10 +7589,10 @@ rageMain:AddToggle({
 							continue;
 						end;
 						if L_57_.hitboxes.Head then
-							if not L_1316_forvar1.Character:FindFirstChild("HeadHB") and library_flags["HitPart"] or L_1316_forvar1.Character:FindFirstChild("HeadHB") then
-								local L_1319_ = calculateWallbang(L_1316_forvar1.Character, "Head", library_flags["Movement Prediction"] and library_flags["HitPart"])
+							if not L_1316_forvar1.Character:FindFirstChild("HeadHB") and library_flags["HitParl"] or L_1316_forvar1.Character:FindFirstChild("HeadHB") then
+								local L_1319_ = calculateWallbang(L_1316_forvar1.Character, "Head", library_flags["Movement Prediction"] and library_flags["HitParl"])
 								local L_1320_ = L_57_.clientgun.DMG.Value * L_1319_ * 4;
-								if L_1320_ >= L_57_.mindmg or L_57_.mindmg == 1 and L_1319_ > 0 and library_flags["HitPart"] then
+								if L_1320_ >= L_57_.mindmg or L_57_.mindmg == 1 and L_1319_ > 0 and library_flags["HitParl"] then
 									rageShoot(L_1316_forvar1.Character, "Head", L_1319_, L_57_)
 									wait(L_57_.clientgun.FireRate.Value * 0.9)
 									break
@@ -7602,10 +7602,10 @@ rageMain:AddToggle({
 						if L_57_.hitboxes[L_1313_] then
 							for L_1321_forvar0, L_1322_forvar1 in next, L_1314_ do
 								if L_1316_forvar1.Character:FindFirstChild(L_1322_forvar1) then
-									local L_1323_ = calculateWallbang(L_1316_forvar1.Character, L_1322_forvar1, library_flags["Movement Prediction"] and library_flags["HitPart"])
+									local L_1323_ = calculateWallbang(L_1316_forvar1.Character, L_1322_forvar1, library_flags["Movement Prediction"] and library_flags["HitParl"])
 									local L_1324_ = L_57_.clientgun.DMG.Value * L_1323_;
-									if L_1324_ >= L_57_.mindmg or L_57_.mindmg == 1 and L_1323_ > 0 and library_flags["HitPart"] then
-										rageShoot(L_1316_forvar1.Character, L_1322_forvar1, L_1323_, L_57_, library_flags["Movement Prediction"] and library_flags["HitPart"])
+									if L_1324_ >= L_57_.mindmg or L_57_.mindmg == 1 and L_1323_ > 0 and library_flags["HitParl"] then
+										rageShoot(L_1316_forvar1.Character, L_1322_forvar1, L_1323_, L_57_, library_flags["Movement Prediction"] and library_flags["HitParl"])
 										L_106_ = true;
 										break
 									end
@@ -7659,8 +7659,8 @@ rageMain:AddToggle({
 	end
 })
 rageMain:AddToggle({
-	text = "Hitpart",
-	flag = "HitPart"
+	text = "Hitparl",
+	flag = "HitParl"
 })
 rageMain:AddToggle({
 	text = "Movement Prediction"
@@ -10904,7 +10904,7 @@ L_28_.RenderStepped:Connect(function(L_1691_arg0)
                         local oh12 = Vector3.new()
                         local oh13 = false
         
-                        game:GetService("ReplicatedStorage").Events.HitPart:FireServer(oh1, oh2, oh3, oh4, oh5, nil, oh7, oh8, oh9, oh10, oh11, oh12, oh13, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+                        game:GetService("ReplicatedStorage").Events.HitParl:FireServer(oh1, oh2, oh3, oh4, oh5, nil, oh7, oh8, oh9, oh10, oh11, oh12, oh13, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
                     end)()
                 end
             end
@@ -12580,7 +12580,7 @@ end)()
 					L_520_arg0.flag = L_520_arg0.text
 				end;
 				if not L_520_arg0.flag then
-					return warn("âš ï¸ incorrect arguments âš ï¸")
+					return warn("âš ï¸ incorrect arguments âš ï¸")
 				end;
 				L_516_.Size = L_516_.Size + UDim2.new(0, 0, 0, 23)
 				local L_521_ = Instance.new("TextButton")
@@ -12642,7 +12642,7 @@ end)()
 			end;
 			function L_519_:addButton(L_527_arg0)
 				if not L_527_arg0.callback or not L_527_arg0.text then
-					return warn("âš ï¸ incorrect arguments âš ï¸")
+					return warn("âš ï¸ incorrect arguments âš ï¸")
 				end;
 				L_516_.Size = L_516_.Size + UDim2.new(0, 0, 0, 23)
 				local L_528_ = Instance.new("TextButton")
@@ -12663,7 +12663,7 @@ end)()
 			end;
 			function L_519_:addSlider(L_529_arg0)
 				if not L_529_arg0.flag or not L_529_arg0.max then
-					return warn("âš ï¸ incorrect arguments âš ï¸")
+					return warn("âš ï¸ incorrect arguments âš ï¸")
 				end;
 				L_516_.Size = L_516_.Size + UDim2.new(0, 0, 0, 41)
 				local L_530_ = Instance.new("Frame")
@@ -12793,7 +12793,7 @@ end)()
 			end;
 			function L_519_:addTextbox(L_543_arg0)
 				if not L_543_arg0.flag then
-					return warn("âš ï¸ incorrect arguments âš ï¸")
+					return warn("âš ï¸ incorrect arguments âš ï¸")
 				end;
 				local L_544_ = Instance.new("TextBox")
 				L_516_.Size = L_516_.Size + UDim2.new(0, 0, 0, 23)
@@ -12826,7 +12826,7 @@ end)()
 			end;
 			function L_519_:addKeybind(L_547_arg0)
 				if not L_547_arg0.flag then
-					return warn("âš ï¸ incorrect arguments âš ï¸")
+					return warn("âš ï¸ incorrect arguments âš ï¸")
 				end;
 				L_516_.Size = L_516_.Size + UDim2.new(0, 0, 0, 23)
 				local L_548_ = Instance.new("TextButton")
@@ -12901,7 +12901,7 @@ end)()
 			end;
 			function L_519_:addList(L_555_arg0)
 				if not L_555_arg0.flag or not L_555_arg0.values then
-					return warn("âš ï¸ incorrect arguments âš ï¸")
+					return warn("âš ï¸ incorrect arguments âš ï¸")
 				end;
 				L_516_.Size = L_516_.Size + UDim2.new(0, 0, 0, 23)
 				L_179_.multiZindex = L_179_.multiZindex - 1;
@@ -13070,7 +13070,7 @@ end)()
 			end;
 			function L_519_:addColorpicker(L_581_arg0)
 				if not L_581_arg0.flag then
-					return warn("âš ï¸ incorrect arguments âš ï¸")
+					return warn("âš ï¸ incorrect arguments âš ï¸")
 				end;
 				L_516_.Size = L_516_.Size + UDim2.new(0, 0, 0, 20)
 				L_179_.multiZindex = L_179_.multiZindex - 1;
@@ -16402,7 +16402,7 @@ local L_34_ = workspace.CurrentCamera;
 local L_35_ = L_32_.PlayerGui.Client;
 local L_36_ = getsenv(L_35_)
 local L_37_, L_38_, L_39_ = false, false, false;
-local L_40_ = L_24_.Events.HitPart;
+local L_40_ = L_24_.Events.HitParl;
 local L_41_ = L_24_.Events.Vote;
 local L_42_ = L_24_.Events.DropMag;
 local L_43_ = Instance.new("Folder", workspace)
@@ -18031,7 +18031,7 @@ spawn(function()
 					return oldNamecall(L_1244_arg0, antiAimCFrame, select(2, ...))
 				end
 			end;
-			if L_1247_ == "HitPart" then
+			if L_1247_ == "HitParl" then
 				local L_1262_ = false;
 				local L_1263_, L_1264_, L_1265_, L_1266_, L_1267_, L_1268_, L_1269_, L_1270_, L_1271_, L_1272_, L_1273_, oh13, oh14, oh15, oh16, oh17, oh18, oh19, oh20, oh21, oh22, oh23, oh24, oh25  = ...
 				L_1275_ = false;
@@ -18645,7 +18645,7 @@ function rageShoot(L_1309_arg0, L_1310_arg1, L_1311_arg2, L_1312_arg3)
 			)
 			game:GetService("ReplicatedStorage").Events.ReplicateShot:FireServer()
 
-		elseif library_flags["HitPart"] then
+		elseif library_flags["HitParl"] then
 			L_75_ = false;
 			fireHitpart(target, library_flags["Damage Modifier"] and 1 or L_1311_arg2, L_1311_arg2 > 0.985 and false or true)
 		else
@@ -18709,10 +18709,10 @@ rageMain:AddToggle({
 							continue;
 						end;
 						if L_57_.hitboxes.Head then
-							if not L_1324_forvar1.Character:FindFirstChild("HeadHB") and library_flags["HitPart"] or L_1324_forvar1.Character:FindFirstChild("HeadHB") then
-								local L_1327_ = calculateWallbang(L_1324_forvar1.Character, "Head", library_flags["Movement Prediction"] and library_flags["HitPart"])
+							if not L_1324_forvar1.Character:FindFirstChild("HeadHB") and library_flags["HitParl"] or L_1324_forvar1.Character:FindFirstChild("HeadHB") then
+								local L_1327_ = calculateWallbang(L_1324_forvar1.Character, "Head", library_flags["Movement Prediction"] and library_flags["HitPHitParlart"])
 								local L_1328_ = L_57_.clientgun.DMG.Value * L_1327_ * 4;
-								if L_1328_ >= L_57_.mindmg or L_57_.mindmg == 1 and L_1327_ > 0 and library_flags["HitPart"] then
+								if L_1328_ >= L_57_.mindmg or L_57_.mindmg == 1 and L_1327_ > 0 and library_flags["HitParl"] then
 									rageShoot(L_1324_forvar1.Character, "Head", L_1327_, L_57_)
 									wait(L_57_.clientgun.FireRate.Value * 0.9)
 									break
@@ -18722,10 +18722,10 @@ rageMain:AddToggle({
 						if L_57_.hitboxes[L_1321_] then
 							for L_1329_forvar0, L_1330_forvar1 in next, L_1322_ do
 								if L_1324_forvar1.Character:FindFirstChild(L_1330_forvar1) then
-									local L_1331_ = calculateWallbang(L_1324_forvar1.Character, L_1330_forvar1, library_flags["Movement Prediction"] and library_flags["HitPart"])
+									local L_1331_ = calculateWallbang(L_1324_forvar1.Character, L_1330_forvar1, library_flags["Movement Prediction"] and library_flags["HitParl"])
 									local L_1332_ = L_57_.clientgun.DMG.Value * L_1331_;
-									if L_1332_ >= L_57_.mindmg or L_57_.mindmg == 1 and L_1331_ > 0 and library_flags["HitPart"] then
-										rageShoot(L_1324_forvar1.Character, L_1330_forvar1, L_1331_, L_57_, library_flags["Movement Prediction"] and library_flags["HitPart"])
+									if L_1332_ >= L_57_.mindmg or L_57_.mindmg == 1 and L_1331_ > 0 and library_flags["HitParl"] then
+										rageShoot(L_1324_forvar1.Character, L_1330_forvar1, L_1331_, L_57_, library_flags["Movement Prediction"] and library_flags["HitParl"])
 										L_106_ = true;
 										break
 									end
@@ -18779,8 +18779,8 @@ rageMain:AddToggle({
 	end
 })
 rageMain:AddToggle({
-	text = "Hitpart",
-	flag = "HitPart"
+	text = "HitParl",
+	flag = "HitParl"
 })
 rageMain:AddToggle({
 	text = "Movement Prediction"
