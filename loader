@@ -1,0 +1,414 @@
+local CoreGui = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
+
+
+local URL_LATEST = "https://raw.githubusercontent.com/Freezewo/cuteware/refs/heads/main/cuteware.xyz"
+local URL_BETA   = "https://raw.githubusercontent.com/Freezewo/cuteware/refs/heads/main/beta"
+
+
+local function cleanAll()
+    for _, gui in ipairs(CoreGui:GetChildren()) do
+        if gui.Name == "Cuteware" then gui:Destroy() end
+    end
+    if Players.LocalPlayer then
+        local pg = Players.LocalPlayer:FindFirstChild("PlayerGui")
+        if pg then
+            for _, gui in ipairs(pg:GetChildren()) do
+                if gui.Name == "Cuteware" then gui:Destroy() end
+            end
+        end
+    end
+end
+pcall(cleanAll)
+
+-- Exact Colors From the Original Loader Image (Right Image)
+local C = {
+    black       = Color3.fromRGB(10, 10, 10),      -- Outer shadow/border
+    frame_bord  = Color3.fromRGB(35, 35, 35),      -- Thick grey border around window & elements
+    bg          = Color3.fromRGB(24, 25, 24),      -- Dark grey-greenish inner background
+    accent      = Color3.fromRGB(36, 68, 166),     -- Cuteware blue line
+    text_white  = Color3.fromRGB(220, 220, 220),   -- Title text
+    text_grey   = Color3.fromRGB(140, 145, 140),   -- Body text (slightly greenish grey)
+    grad_top    = Color3.fromRGB(56, 56, 56),      -- Element gradient top
+    grad_bot    = Color3.fromRGB(35, 35, 35),      -- Element gradient bot
+}
+
+-- Text on the labels and title is smooth (SourceSans)
+local FONT_UI = Enum.Font.SourceSans
+local FONT_UI_SIZE = 14
+
+-- Text inside dropdown/buttons looks more like Code/RobotoMono
+local FONT_BTN = Enum.Font.Code
+local FONT_BTN_SIZE = 12
+
+local Gui = Instance.new("ScreenGui")
+Gui.Name = "Cuteware"
+Gui.ResetOnSpawn = false
+Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+pcall(function() Gui.Parent = CoreGui end)
+if not Gui.Parent then Gui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui") end
+
+-- Outer Pure Black Border
+local Outline = Instance.new("Frame")
+Outline.Parent = Gui
+Outline.BackgroundColor3 = C.black
+Outline.BorderSizePixel = 0
+Outline.Position = UDim2.new(0.5, -135, 0.5, -80)
+Outline.Size = UDim2.new(0, 270, 0, 160)
+
+-- Inner Thick Grey Border
+local ThickBorder = Instance.new("Frame")
+ThickBorder.Parent = Outline
+ThickBorder.BackgroundColor3 = C.frame_bord
+ThickBorder.BorderSizePixel = 0
+ThickBorder.Position = UDim2.new(0, 1, 0, 1)
+ThickBorder.Size = UDim2.new(1, -2, 1, -2)
+
+-- Main Background (Darker part)
+local Main = Instance.new("Frame")
+Main.Parent = ThickBorder
+Main.BackgroundColor3 = C.bg
+Main.BorderSizePixel = 0
+Main.Position = UDim2.new(0, 2, 0, 22) -- Leaves space at top for title on ThickBorder background
+Main.Size = UDim2.new(1, -4, 1, -24)
+
+-- Title (Lives on the ThickBorder part, above the blue line)
+local Title = Instance.new("TextLabel")
+Title.Parent = ThickBorder
+Title.BackgroundTransparency = 1
+Title.Position = UDim2.new(0, 8, 0, 0)
+Title.Size = UDim2.new(1, -16, 0, 21)
+Title.Font = Enum.Font.Code -- The title IS actually monospace in original
+Title.Text = "cuteware loader $$$"
+Title.TextColor3 = C.text_white
+Title.TextSize = 13
+Title.TextXAlignment = Enum.TextXAlignment.Left
+
+-- Blue horizontal accent line (Separates title from body)
+local BlueLine = Instance.new("Frame")
+BlueLine.Parent = ThickBorder
+BlueLine.BackgroundColor3 = C.accent
+BlueLine.BorderSizePixel = 0
+BlueLine.Position = UDim2.new(0, 0, 0, 21)
+BlueLine.Size = UDim2.new(1, 0, 0, 1)
+
+-- "Game: Counter Blox" Label
+local GameLbl = Instance.new("TextLabel")
+GameLbl.Parent = Main
+GameLbl.BackgroundTransparency = 1
+GameLbl.Position = UDim2.new(0, 8, 0, 8)
+GameLbl.Size = UDim2.new(1, -16, 0, 14)
+GameLbl.Font = FONT_UI
+GameLbl.Text = "Game: Counter Blox"
+GameLbl.TextColor3 = C.text_grey
+GameLbl.TextSize = FONT_UI_SIZE
+GameLbl.TextXAlignment = Enum.TextXAlignment.Left
+
+-- Checkbox UI
+local CbOut = Instance.new("Frame")
+CbOut.Parent = Main
+CbOut.BackgroundColor3 = C.black
+CbOut.BorderSizePixel = 0
+CbOut.Position = UDim2.new(0, 8, 0, 30)
+CbOut.Size = UDim2.new(0, 12, 0, 12)
+
+-- Inner grey border for checkbox exactly like main window
+local CbMid = Instance.new("Frame")
+CbMid.Parent = CbOut
+CbMid.BackgroundColor3 = C.frame_bord
+CbMid.BorderSizePixel = 0
+CbMid.Position = UDim2.new(0, 1, 0, 1)
+CbMid.Size = UDim2.new(1, -2, 1, -2)
+
+local CbFill = Instance.new("Frame")
+CbFill.Parent = CbMid
+CbFill.BackgroundColor3 = C.bg
+CbFill.BorderSizePixel = 0
+CbFill.Position = UDim2.new(0, 1, 0, 1)
+CbFill.Size = UDim2.new(1, -2, 1, -2)
+
+local AutoLbl = Instance.new("TextLabel")
+AutoLbl.Parent = Main
+AutoLbl.BackgroundTransparency = 1
+AutoLbl.Position = UDim2.new(0, 26, 0, 29)
+AutoLbl.Size = UDim2.new(0, 100, 0, 14)
+AutoLbl.Font = FONT_UI
+AutoLbl.Text = "Autoload"
+AutoLbl.TextColor3 = C.text_grey
+AutoLbl.TextSize = FONT_UI_SIZE
+AutoLbl.TextXAlignment = Enum.TextXAlignment.Left
+
+local CbBtn = Instance.new("TextButton")
+CbBtn.Parent = Main
+CbBtn.BackgroundTransparency = 1
+CbBtn.Text = ""
+CbBtn.Position = UDim2.new(0, 8, 0, 29)
+CbBtn.Size = UDim2.new(0, 100, 0, 14)
+
+local isAuto = false
+CbBtn.MouseButton1Click:Connect(function()
+    isAuto = not isAuto
+    CbFill.BackgroundColor3 = isAuto and C.accent or C.bg
+end)
+
+-- "Build version" Label
+local BvLbl = Instance.new("TextLabel")
+BvLbl.Parent = Main
+BvLbl.BackgroundTransparency = 1
+BvLbl.Position = UDim2.new(0, 8, 0, 52)
+BvLbl.Size = UDim2.new(1, -16, 0, 14)
+BvLbl.Font = FONT_UI
+BvLbl.Text = "Build version"
+BvLbl.TextColor3 = C.text_grey
+BvLbl.TextSize = FONT_UI_SIZE
+BvLbl.TextXAlignment = Enum.TextXAlignment.Left
+
+-- Control Box Factory (Matches the 3-layer window borders: Black -> ThickGrey -> Content)
+local function CreateControlBox(yPos, height, parent)
+    -- 1. Outer Black
+    local Out = Instance.new("Frame")
+    Out.Parent = parent
+    Out.BackgroundColor3 = C.black
+    Out.BorderSizePixel = 0
+    Out.Position = UDim2.new(0, 8, 0, yPos)
+    Out.Size = UDim2.new(1, -16, 0, height)
+
+    -- 2. Thick Grey Border
+    local Mid = Instance.new("Frame")
+    Mid.Parent = Out
+    Mid.BackgroundColor3 = C.frame_bord
+    Mid.BorderSizePixel = 0
+    Mid.Position = UDim2.new(0, 1, 0, 1)
+    Mid.Size = UDim2.new(1, -2, 1, -2)
+
+    -- 3. Gradient Fill
+    local In = Instance.new("Frame")
+    In.Parent = Mid
+    In.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    In.BorderSizePixel = 0
+    In.Position = UDim2.new(0, 1, 0, 1)
+    In.Size = UDim2.new(1, -2, 1, -2)
+
+    local Grad = Instance.new("UIGradient")
+    Grad.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, C.grad_top),
+        ColorSequenceKeypoint.new(1, C.grad_bot)
+    }
+    Grad.Rotation = 90
+    Grad.Parent = In
+
+    return Out, In, Grad
+end
+
+-- =======================================================
+-- DROPDOWN OPTIONS
+-- =======================================================
+local opts = {"Latest build", "Beta build"}
+local selOpt = 1
+local ddOpen = false
+
+local DdOut, DdIn, DdGrad = CreateControlBox(68, 20, Main)
+DdOut.ZIndex = 2
+DdIn.ZIndex = 2
+
+local DdText = Instance.new("TextLabel")
+DdText.Parent = DdIn
+DdText.BackgroundTransparency = 1
+DdText.Position = UDim2.new(0, 6, 0, 0)
+DdText.Size = UDim2.new(1, -20, 1, 0)
+DdText.Font = FONT_BTN
+DdText.Text = opts[selOpt]
+DdText.TextColor3 = C.text_white
+DdText.TextSize = FONT_BTN_SIZE
+DdText.TextXAlignment = Enum.TextXAlignment.Left
+DdText.ZIndex = 3
+
+local DdArrow = Instance.new("TextLabel")
+DdArrow.Parent = DdIn
+DdArrow.BackgroundTransparency = 1
+DdArrow.Position = UDim2.new(1, -14, 0, 0)
+DdArrow.Size = UDim2.new(0, 10, 1, 0)
+DdArrow.Font = FONT_BTN
+DdArrow.Text = "▲"
+DdArrow.TextColor3 = C.text_white
+DdArrow.TextSize = 10
+DdArrow.ZIndex = 3
+
+local DdBtn = Instance.new("TextButton")
+DdBtn.Parent = DdIn
+DdBtn.BackgroundTransparency = 1
+DdBtn.Text = ""
+DdBtn.Size = UDim2.new(1, 0, 1, 0)
+DdBtn.ZIndex = 4
+
+local DdListOut = Instance.new("Frame")
+DdListOut.Parent = DdOut
+DdListOut.BackgroundColor3 = C.black
+DdListOut.BorderSizePixel = 0
+DdListOut.Position = UDim2.new(0, 0, 1, 1)
+DdListOut.Size = UDim2.new(1, 0, 0, 0)
+DdListOut.ClipsDescendants = true
+DdListOut.ZIndex = 10
+DdListOut.Visible = false
+
+local DdListMid = Instance.new("Frame")
+DdListMid.Parent = DdListOut
+DdListMid.BackgroundColor3 = C.frame_bord
+DdListMid.BorderSizePixel = 0
+DdListMid.Position = UDim2.new(0, 1, 0, 0)
+DdListMid.Size = UDim2.new(1, -2, 1, -1)
+DdListMid.ZIndex = 11
+
+local optH = 20
+for i, txt in ipairs(opts) do
+    local OIn = Instance.new("Frame")
+    OIn.Parent = DdListMid
+    OIn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    OIn.BorderSizePixel = 0
+    OIn.Position = UDim2.new(0, 1, 0, (i-1)*optH + 1)
+    OIn.Size = UDim2.new(1, -2, 0, optH-1)
+    OIn.ZIndex = 12
+
+    local OG = Instance.new("UIGradient")
+    OG.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, C.grad_top),
+        ColorSequenceKeypoint.new(1, C.grad_bot)
+    }
+    OG.Rotation = 90
+    OG.Parent = OIn
+
+    local oL = Instance.new("TextLabel")
+    oL.Parent = OIn
+    oL.BackgroundTransparency = 1
+    oL.Position = UDim2.new(0, 6, 0, 0)
+    oL.Size = UDim2.new(1, -12, 1, 0)
+    oL.Font = FONT_BTN
+    oL.Text = txt
+    oL.TextColor3 = C.text_white
+    oL.TextSize = FONT_BTN_SIZE
+    oL.TextXAlignment = Enum.TextXAlignment.Left
+    oL.ZIndex = 13
+
+    local oB = Instance.new("TextButton")
+    oB.Parent = OIn
+    oB.BackgroundTransparency = 1
+    oB.Text = ""
+    oB.Size = UDim2.new(1, 0, 1, 0)
+    oB.ZIndex = 14
+
+    oB.MouseEnter:Connect(function()
+        OIn.BackgroundColor3 = C.accent
+        OG.Enabled = false
+    end)
+    oB.MouseLeave:Connect(function()
+        OIn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        OG.Enabled = true
+    end)
+    oB.MouseButton1Click:Connect(function()
+        selOpt = i
+        DdText.Text = txt
+        ddOpen = false
+        DdArrow.Text = "▲"
+        DdListOut.Size = UDim2.new(1, 0, 0, 0)
+        DdListOut.Visible = false
+    end)
+end
+
+DdBtn.MouseButton1Click:Connect(function()
+    ddOpen = not ddOpen
+    if ddOpen then
+        DdListOut.Visible = true
+        DdArrow.Text = "▼"
+        DdListOut.Size = UDim2.new(1, 0, 0, #opts*optH + 2)
+    else
+        DdArrow.Text = "▲"
+        DdListOut.Size = UDim2.new(1, 0, 0, 0)
+        DdListOut.Visible = false
+    end
+end)
+
+-- =======================================================
+-- LOAD BUTTON
+-- =======================================================
+local LdOut, LdIn, LdGrad = CreateControlBox(98, 20, Main)
+
+local LoadBtn = Instance.new("TextButton")
+LoadBtn.Parent = LdIn
+LoadBtn.BackgroundTransparency = 1
+LoadBtn.Size = UDim2.new(1, 0, 1, 0)
+LoadBtn.Font = FONT_BTN
+LoadBtn.Text = "Load"
+LoadBtn.TextColor3 = C.text_white
+LoadBtn.TextSize = FONT_BTN_SIZE
+
+LoadBtn.MouseEnter:Connect(function()
+    LdGrad.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(66, 66, 66)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(46, 46, 46))
+    }
+end)
+LoadBtn.MouseLeave:Connect(function()
+    LdGrad.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, C.grad_top),
+        ColorSequenceKeypoint.new(1, C.grad_bot)
+    }
+end)
+
+-- Dragging
+local drag = false
+local dInp, dStart, sPos
+
+Outline.InputBegan:Connect(function(inp)
+    if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
+        local pos = inp.Position
+        if pos.Y - Outline.AbsolutePosition.Y < 24 then
+            drag = true
+            dStart = pos
+            sPos = Outline.Position
+            inp.Changed:Connect(function()
+                if inp.UserInputState == Enum.UserInputState.End then drag = false end
+            end)
+        end
+    end
+end)
+Outline.InputChanged:Connect(function(inp)
+    if inp.UserInputType == Enum.UserInputType.MouseMovement or inp.UserInputType == Enum.UserInputType.Touch then
+        dInp = inp
+    end
+end)
+UserInputService.InputChanged:Connect(function(inp)
+    if inp == dInp and drag then
+        local dx = inp.Position.X - dStart.X
+        local dy = inp.Position.Y - dStart.Y
+        Outline.Position = UDim2.new(sPos.X.Scale, sPos.X.Offset + dx, sPos.Y.Scale, sPos.Y.Offset + dy)
+    end
+end)
+
+-- Load function
+LoadBtn.MouseButton1Click:Connect(function()
+    if LoadBtn.Text == "Loading..." then return end
+    
+    local selectedUrl = URL_LATEST
+    if selOpt == 2 then
+        selectedUrl = URL_BETA
+    end
+
+    LoadBtn.Text = "Loading..."
+    LoadBtn.TextColor3 = C.accent
+
+    task.spawn(function()
+        local ok, err = pcall(function() loadstring(game:HttpGet(selectedUrl))() end)
+        if ok then
+            Gui:Destroy()
+        else
+            warn("Loader err:", err)
+            LoadBtn.Text = "Error"
+            LoadBtn.TextColor3 = Color3.fromRGB(255, 50, 50)
+            task.wait(2)
+            LoadBtn.Text = "Load"
+            LoadBtn.TextColor3 = C.text_white
+        end
+    end)
+end)
