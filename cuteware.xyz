@@ -8835,7 +8835,7 @@ miscMain:AddButton({
 		if not getgenv().Vexus_Spoof_Loaded then
 			getgenv().Vexus_Spoof_Loaded = true
 
-			-- [[ VEXUS INVENTORY SPOOFER V8.9 - EMERGENCY STABILITY FIX ]]
+		
 			local HttpService = game:GetService("HttpService")
 			local ReplicatedStorage = game:GetService("ReplicatedStorage")
 			local ReplicatedFirst = game:GetService("ReplicatedFirst")
@@ -9006,33 +9006,13 @@ miscMain:AddButton({
 				end
 				return res
 			end
-
-			local function createGUI()
-				if CoreGui:FindFirstChild("VexusV7") then CoreGui.VexusV7:Destroy() end
-				local sg = Instance.new("ScreenGui", CoreGui); sg.Name = "VexusV7"; sg.ResetOnSpawn = false
-				local main = Instance.new("Frame", sg); main.Size = UDim2.new(0, 240, 0, 100); main.Position = UDim2.new(0.5, -120, 0.45, 0); main.BackgroundColor3 = Color3.fromRGB(15,10,15); main.BorderSizePixel = 0; main.Active = true; Instance.new("UICorner", main).CornerRadius = UDim.new(0, 10)
-				local title = Instance.new("TextLabel", main); title.Size = UDim2.new(1, 0, 0, 30); title.Text = " VEXUS V8.9 EMERGENCY FIX"; title.TextColor3 = Color3.new(1,0,0); title.Font = Enum.Font.GothamBold; title.TextSize = 10; title.BackgroundTransparency = 1
-				
-				local b = Instance.new("TextButton", main); b.Size = UDim2.new(0.9, 0, 0, 40); b.Position = UDim2.new(0.05, 0, 0.4, 0); b.BackgroundColor3 = Color3.fromRGB(40,40,60); b.Text = getgenv().Vexus_IsSpoofing and "VEXUS: ВКЛ (СТАБИЛЬНО)" or "ВЫКЛ"; b.TextColor3 = Color3.new(1,1,1); b.Font = Enum.Font.GothamBold; Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
-				b.MouseButton1Click:Connect(function()
-					getgenv().Vexus_IsSpoofing = not getgenv().Vexus_IsSpoofing
-					cachedInv = nil
-					b.Text = getgenv().Vexus_IsSpoofing and "VEXUS: ВКЛ (СТАБИЛЬНО)" or "ВЫКЛ"
-					if getgenv().Vexus_ForceUpdate then getgenv().Vexus_ForceUpdate() end
-				end)
-			end
-
-			createGUI()
-			VEX_LOG("V8.9 Активна. Рекурсия устранена. Игра стабильна.")
-
-			miscOK.text = "Vexus Spoof V8.9 loaded."
+		    miscOK.text = "Skins Unlocked"
 			miscOK:Show()
 		else
 			if getgenv().Vexus_ForceUpdate then getgenv().Vexus_ForceUpdate() end
 			miscOK.text = "Vexus Inventory already unlocked."
 			miscOK:Show()
 		end
-		-- END VEXUS BLOCK
 	end
 })
 miscMovement = miscColumn:AddSection"Movement"
@@ -20219,23 +20199,8 @@ miscMain:AddButton({
 				return res
 			end
 
-			local function createGUI()
-				if CoreGui:FindFirstChild("VexusV7") then CoreGui.VexusV7:Destroy() end
-				local sg = Instance.new("ScreenGui", CoreGui); sg.Name = "VexusV7"; sg.ResetOnSpawn = false
-				local main = Instance.new("Frame", sg); main.Size = UDim2.new(0, 240, 0, 100); main.Position = UDim2.new(0.5, -120, 0.45, 0); main.BackgroundColor3 = Color3.fromRGB(15,10,15); main.BorderSizePixel = 0; main.Active = true; Instance.new("UICorner", main).CornerRadius = UDim.new(0, 10)
-				local title = Instance.new("TextLabel", main); title.Size = UDim2.new(1, 0, 0, 30); title.Text = " VEXUS V8.9 EMERGENCY FIX"; title.TextColor3 = Color3.new(1,0,0); title.Font = Enum.Font.GothamBold; title.TextSize = 10; title.BackgroundTransparency = 1
-				
-				local b = Instance.new("TextButton", main); b.Size = UDim2.new(0.9, 0, 0, 40); b.Position = UDim2.new(0.05, 0, 0.4, 0); b.BackgroundColor3 = Color3.fromRGB(40,40,60); b.Text = getgenv().Vexus_IsSpoofing and "VEXUS: ВКЛ (СТАБИЛЬНО)" or "ВЫКЛ"; b.TextColor3 = Color3.new(1,1,1); b.Font = Enum.Font.GothamBold; Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
-				b.MouseButton1Click:Connect(function()
-					getgenv().Vexus_IsSpoofing = not getgenv().Vexus_IsSpoofing
-					cachedInv = nil
-					b.Text = getgenv().Vexus_IsSpoofing and "VEXUS: ВКЛ (СТАБИЛЬНО)" or "ВЫКЛ"
-					if getgenv().Vexus_ForceUpdate then getgenv().Vexus_ForceUpdate() end
-				end)
-			end
-
-			createGUI()
-			VEX_LOG("V8.9 Активна. Рекурсия устранена. Игра стабильна.")
+			
+			VEX_LOG("")
 
 			miscOK.text = "Vexus Spoof V8.9 loaded."
 			miscOK:Show()
@@ -20244,7 +20209,7 @@ miscMain:AddButton({
 			miscOK.text = "Vexus Inventory already unlocked."
 			miscOK:Show()
 		end
-		-- END VEXUS BLOCK
+		
 	end
 })
 miscMovement = miscColumn:AddSection"Movement"
